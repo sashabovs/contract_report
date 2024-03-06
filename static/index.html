@@ -20,11 +20,13 @@
             import App from "./js/App.js";
             import Home from "./js/Home.js";
             import AdminPage from "./js/AdminPage.js";
+            import EditUser from "./js/EditUser.js";
 
 
             const routes = [
               { path: '/', component: Home },
               { path: '/admin', component: AdminPage },
+              { path: '/admin/edit-user/:id', component: EditUser, props: true },
             ]
 
             const router = VueRouter.createRouter({

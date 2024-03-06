@@ -16,7 +16,7 @@ export default {
             axios.post('/login', body)
             .then((res) => {
                 Token.token = res.data.token
-                var tokens = this.token.split(".");
+                var tokens = Token.token.split(".");
                 var token_data = JSON.parse(atob(tokens[1]));
 
                 if(token_data.role === 'administrator'){
@@ -26,7 +26,6 @@ export default {
             .catch((error) => {
               console.log(error.data.message)
             })
-
         }
     },
     template: `
