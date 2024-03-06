@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="css/main.css" />
+
+        <script src="https://unpkg.com/vue@3"></script>
+        <script src="https://unpkg.com/vue-router@4"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+
+<!--        <script type="module" src="js/main.js"></script>-->
+    </head>
+    <body>
+        <div id="app">
+            <App></App>
+        </div>
+
+        <script type="module">
+            import App from "./js/App.js";
+            import Home from "./js/Home.js";
+            import AdminPage from "./js/AdminPage.js";
+
+
+            const routes = [
+              { path: '/', component: Home },
+              { path: '/admin', component: AdminPage },
+            ]
+
+            const router = VueRouter.createRouter({
+              history: VueRouter.createWebHashHistory(),
+              routes: routes,
+            })
+
+
+            app=Vue.createApp(App);
+            app.use(router).mount("#app");
+            app.config.globalProperties.token = '';
+        </script>
+    </body>
+</html>
