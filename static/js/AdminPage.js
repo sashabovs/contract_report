@@ -7,12 +7,12 @@ export default {
     },
     data() {
         return {
-            users: [],
+            users: []
         };
     },
     methods: {
         onAddUserClick(){
-            console.log(Token.token);
+            this.$router.push('/admin/edit-user/new');
         },
 
         getUsers() {
@@ -25,7 +25,7 @@ export default {
                 this.users = res.data;
             })
             .catch((error) => {
-              console.log(error.data.message);
+              console.log(error.message);
             })
         },
 
