@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+from enum import Enum, auto
 
 import flask
 import psycopg
@@ -25,6 +26,15 @@ engine_writer = sqlalchemy.create_engine(
     "postgresql+psycopg://contract_report_writer:123@localhost:5432/contract_report",
     echo=True,
 )
+
+
+class Role(Enum):
+    ADMINISTRATOR = "administrator"
+    HEAD_OF_HUMAN_RESOURCES = "head_of_human_resources"
+    INSPECTOR = "inspector"
+    TEACHER = "teacher"
+    HEAD_OF_CATHEDRA = "head_of_cathedra"
+
 
 routes = []
 JWT_SECRET = "secret"
@@ -126,14 +136,11 @@ def get_users():
         ]
     )
 
+
 @app.route("/cathedras")
 def get_cathedras():
     session = sqlalchemy.orm.Session(engine_reader)
-    stmt = (
-        sqlalchemy.select(
-            model.Cathedras
-        )
-    )
+    stmt = sqlalchemy.select(model.Cathedras)
 
     rows = session.execute(stmt).all()
     mapping = [row._mapping["Cathedras"] for row in rows]
@@ -148,14 +155,16 @@ def get_cathedras():
         ]
     )
 
+
+@app.route("/roles")
+def get_roles():
+    roles = [role.value for role in Role]
+    return json.dumps(roles)
+
 @app.route("/job_titles")
 def get_job_titles():
     session = sqlalchemy.orm.Session(engine_reader)
-    stmt = (
-        sqlalchemy.select(
-            model.JobTitles
-        )
-    )
+    stmt = sqlalchemy.select(model.JobTitles)
 
     rows = session.execute(stmt).all()
     mapping = [row._mapping["JobTitles"] for row in rows]
@@ -170,20 +179,19 @@ def get_job_titles():
         ]
     )
 
+
 @app.route("/users/<id>")
 def get_user(id):
     session = sqlalchemy.orm.Session(engine_reader)
-    stmt = (
-        sqlalchemy.select(
-            model.Users.id,
-            model.Users.full_name,
-            model.Users.job_title_id,
-            model.Users.cathedra_id,
-            model.Users.role,
-            model.Users.login,
-            model.Users.email,
-        ).where(model.Users.id == id)
-    )
+    stmt = sqlalchemy.select(
+        model.Users.id,
+        model.Users.full_name,
+        model.Users.job_title_id,
+        model.Users.cathedra_id,
+        model.Users.role,
+        model.Users.login,
+        model.Users.email,
+    ).where(model.Users.id == id)
 
     row = session.execute(stmt).first()
     if not row:
@@ -205,9 +213,68 @@ def get_user(id):
     )
 
 
+def get_role(request):
+    token = request.headers.get("Token")
+    if not token:
+        raise RuntimeError("Access token is empty")
+
+    decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    role = decoded_token.get("role")
+    if not role:
+        raise RuntimeError("Access token doesnt contain role")
+
+    return role
+
+
+def check_role(valid_role, role):
+    if role != valid_role.value:
+        raise RuntimeError("Insufficient rights")
+
+
+@app.route("/users/<id>", methods=["DELETE"])
+def delete_user(id):
+
+    try:
+        role = get_role(request)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        check_role(Role.ADMINISTRATOR, role)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    session = sqlalchemy.orm.Session(engine_writer)
+    session.query(model.Users).filter(model.Users.id == id).delete()
+    session.commit()
+
+    return flask.Response(status=200)
+
+
 @app.route("/users/<id>", methods=["POST"])
 def save_user(id):
+    # TODO: check if new user has the same id
     data = request.get_json()
+
+    try:
+        role = get_role(request)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        check_role(Role.ADMINISTRATOR, role)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
 
     if data["password"]:
         new_pass = get_hashed_password(data["password"])
@@ -223,19 +290,59 @@ def save_user(id):
             )
         new_pass = row[0]
 
+    error = ""
+    if not data["user"].get("id"):
+        error += "Empty id. "
+    if not data["user"].get("full_name"):
+        error += "Empty full_name. "
+    if not data["user"].get("role"):
+        error += "Empty role. "
+    if not data["user"].get("login"):
+        error += "Empty login. "
+    if not data["user"].get("email"):
+        error += "Empty email. "
+    if not new_pass:
+        error += "Empty password. "
+
+    if error:
+        return flask.Response(
+            error,
+            status=400,
+        )
+
+    new_user_role = data["user"].get("role")
+    if new_user_role == Role.TEACHER.value:
+        if not data["user"].get("job_title_id"):
+            error += "Empty job_title_id for teacher. "
+        if not data["user"].get("cathedra_id"):
+            error += "Empty cathedra_id for teacher. "
+
+    if error:
+        return flask.Response(
+            error,
+            status=400,
+        )
+
     user = model.Users(
         id=data["user"]["id"],
         full_name=data["user"]["full_name"],
-        job_title_id=data["user"]["job_title_id"],
-        cathedra_id=data["user"]["cathedra_id"],
+        job_title_id=(
+            data["user"]["job_title_id"]
+            if "job_title_id" in data["user"] and data["user"]["job_title_id"]
+            else None
+        ),
+        cathedra_id=(
+            data["user"]["cathedra_id"]
+            if "cathedra_id" in data["user"] and data["user"]["cathedra_id"]
+            else None
+        ),
         role=data["user"]["role"],
         login=data["user"]["login"],
         email=data["user"]["email"],
         password=new_pass,
     )
     session = sqlalchemy.orm.Session(engine_writer)
-    session.add(user)
+    session.merge(user)
     session.commit()
-
 
     return flask.Response(status=200)

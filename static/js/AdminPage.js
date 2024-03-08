@@ -25,7 +25,7 @@ export default {
                 this.users = res.data;
             })
             .catch((error) => {
-              console.log(error.message);
+              console.log(error.response.data);
             })
         },
 
@@ -33,7 +33,20 @@ export default {
             this.$router.push('/admin/edit-user/' + user_id);
         },
         deleteUser(user_id){
-            console.log(user_id);
+            if (!confirm('Do you want to delete user?')){
+                return;
+            }
+            axios.delete('/users/' + user_id, {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.getUsers();
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
         }
     },
     mounted() {

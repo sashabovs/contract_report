@@ -11,7 +11,8 @@ export default {
             user: {},
             passwordVal:"",
             job_titles: [],
-            cathedras: []
+            cathedras: [],
+            roles: []
         };
     },
     methods: {
@@ -26,16 +27,16 @@ export default {
                 this.$router.back();
             })
             .catch((error) => {
-              console.log(error.message);
+              console.log(error.response.data);
             })
         },
         cancel() {
             this.$router.back();
         },
 
-        is_selected_job_title(item_id){
-            return item_id === this.user.job_title_id ? "selected" : null;
-        }
+//        is_selected_job_title(item_id){
+//            return item_id === this.user.job_title_id ? "selected" : null;
+//        }
 
     },
     mounted() {
@@ -60,7 +61,19 @@ export default {
             this.cathedras = res.data;
         })
         .catch((error) => {
-          console.log(error.message);
+          console.log(error.response.data);
+        })
+
+        axios.get('/roles', {
+            headers: {
+                'Token': Token.token,
+            }
+        })
+        .then((res) => {
+            this.roles = res.data;
+        })
+        .catch((error) => {
+          console.log(error.response.data);
         })
 
         if(this.id !== "new"){
@@ -73,7 +86,7 @@ export default {
                 this.user = res.data;
             })
             .catch((error) => {
-              console.log(error.message);
+              console.log(error.response.data);
             })
         }
     },
@@ -86,25 +99,28 @@ export default {
             <input id="full-name" required v-model="user.full_name">
 
             <label for="job-title">Job title:</label>
-            <select name="job-title" id="job-title">
+            <select name="job-title" id="job-title" v-model="user.job_title_id">
                   <option value=""></option>
-                  <option v-bind:value="item.id" v-bind:[is_selected_job_title(item.id)] v-for="(item, index) in job_titles" v-bind:key="item.id">{{ item.name }}</option>
+                  <option v-bind:value="item.id" v-for="(item, index) in job_titles" v-bind:key="item.id">{{ item.name }}</option>
             </select>
 
             <label for="cathedra">Cathedra:</label>
-            <select name="cathedra" id="cathedra">
+            <select name="cathedra" id="cathedra" v-model="user.cathedra_id">
                   <option value=""></option>
-                  <option value="{{ item.id }}" v-for="(item, index) in cathedras" v-bind:key="item.id">{{ item.name }}</option>
+                  <option v-bind:value="item.id" v-for="(item, index) in cathedras" v-bind:key="item.id">{{ item.name }}</option>
             </select>
 
             <label for="role">Role:</label>
-            <input id="role" required v-model="user.role">
+            <select name="role" id="role" v-model="user.role">
+                  <option value=""></option>
+                  <option v-bind:value="item" v-for="(item, index) in roles" v-bind:key="item">{{ item }}</option>
+            </select>
 
             <label for="login">Login:</label>
             <input id="login" required v-model="user.login">
 
             <label for="password">New password:</label>
-            <input id="password" v-model="passwordVal">
+            <input id="password" type="password" v-model="passwordVal">
 
             <label for="email">Email:</label>
             <input id="email" required v-model="user.email">
