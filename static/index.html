@@ -21,12 +21,14 @@
             import Home from "./js/Home.js";
             import AdminPage from "./js/AdminPage.js";
             import EditUser from "./js/EditUser.js";
+            import HeadOfHumanResources from "./js/HeadOfHumanResources.js";
 
 
             const routes = [
               { path: '/', component: Home },
               { path: '/admin', component: AdminPage },
               { path: '/admin/edit-user/:id', component: EditUser, props: true },
+              { path: '/head_of_human_resources', component: HeadOfHumanResources},
             ]
 
             const router = VueRouter.createRouter({

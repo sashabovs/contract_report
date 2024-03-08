@@ -6,8 +6,8 @@ export default {
     },
     data() {
         return {
-            loginVal: "",
-            passwordVal: "",
+            loginVal: "muxina",
+            passwordVal: "123",
         };
     },
     methods: {
@@ -21,6 +21,8 @@ export default {
 
                 if(token_data.role === 'administrator'){
                     this.$router.push('/admin');
+                }else if(token_data.role === 'head_of_human_resources'){
+                    this.$router.push('/head_of_human_resources');
                 }
             })
             .catch((error) => {
