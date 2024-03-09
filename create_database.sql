@@ -215,7 +215,8 @@ CREATE TABLE contract_report.contracts
 (
     id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
     signing_date date NOT NULL,
-    validity_period daterange NOT NULL,
+    valid_from date NOT NULL,
+    valid_till date NOT NULL,
     user_id text NOT NULL,
     template_id integer NOT NULL,
     required_points integer NOT NULL,
