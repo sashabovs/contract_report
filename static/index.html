@@ -22,13 +22,20 @@
             import AdminPage from "./js/AdminPage.js";
             import EditUser from "./js/EditUser.js";
             import HeadOfHumanResources from "./js/HeadOfHumanResources.js";
+            import Teacher from "./js/Teacher.js";
+            import Inspector from "./js/Inspector.js";
+            import HeadOfCathedra from "./js/HeadOfCathedra.js";
+
 
 
             const routes = [
               { path: '/', component: Home },
               { path: '/admin', component: AdminPage },
               { path: '/admin/edit-user/:id', component: EditUser, props: true },
-              { path: '/head_of_human_resources', component: HeadOfHumanResources},
+              { path: '/head-of-human-resources', component: HeadOfHumanResources},
+              { path: '/teacher', component: Teacher},
+              { path: '/inspector', component: Inspector},
+              { path: '/head-of-cathedra', component: HeadOfCathedra},
             ]
 
             const router = VueRouter.createRouter({

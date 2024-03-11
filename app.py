@@ -7,12 +7,14 @@ import jwt
 import contract_report_model as model
 import db_utils
 from admin import admin_app
+from reports import reports_app
 from head_of_human_resources import head_of_human_resources_app
 import token_utils
 
 app = flask.Flask(__name__, static_url_path="", static_folder="static")
 app.register_blueprint(head_of_human_resources_app)
 app.register_blueprint(admin_app)
+app.register_blueprint(reports_app)
 
 
 @app.route("/")
@@ -42,9 +44,10 @@ def login():
         )
 
     role = users.role
+    user_id = users.id
 
     encoded = jwt.encode(
-        {"login": data["login"], "role": role}, token_utils.JWT_SECRET, algorithm="HS256"
+        {"login": data["login"], "role": role, "user_id":user_id}, token_utils.JWT_SECRET, algorithm="HS256"
     )
     return {"token": encoded}
 

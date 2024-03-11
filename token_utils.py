@@ -19,6 +19,6 @@ def get_role():
 
 
 def check_role(valid_role, role):
-    if role != valid_role.value:
+    if role not in [r.value for r in valid_role]:
         raise RuntimeError("Insufficient rights")
 

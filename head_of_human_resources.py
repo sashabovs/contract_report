@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-
+import datetime
 import json
 import flask
+import requests
 import sqlalchemy
 import contract_report_model as model
 import db_utils
@@ -21,7 +22,7 @@ def get_units():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -55,7 +56,7 @@ def get_inspectors():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -91,7 +92,7 @@ def get_contract_templates():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -125,7 +126,7 @@ def edit_contract_template(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -164,7 +165,7 @@ def delete_contract_template(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -190,7 +191,7 @@ def save_contract_template():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -227,7 +228,7 @@ def get_parameters():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -271,7 +272,7 @@ def edit_parameters(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -317,7 +318,7 @@ def delete_parameter(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -341,7 +342,7 @@ def save_parameter():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -387,7 +388,7 @@ def get_inspection_periods():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -421,7 +422,7 @@ def get_parameters_in_template(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -465,7 +466,7 @@ def edit_parameter_in_template(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -524,7 +525,7 @@ def delete_parameter_in_template(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -550,7 +551,7 @@ def save_parameter_in_template():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -607,7 +608,7 @@ def get_teachers_without_contract():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -636,6 +637,8 @@ def get_teachers_without_contract():
 
 @head_of_human_resources_app.route("/contracts")
 def get_contracts():
+    params_user_id = flask.request.args.get("user_id")
+    params_is_active = flask.request.args.get("is_active")
 
     try:
         role = token_utils.get_role()
@@ -645,7 +648,7 @@ def get_contracts():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES, db_utils.Role.TEACHER], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -654,6 +657,10 @@ def get_contracts():
 
     session = sqlalchemy.orm.Session(db_utils.engine_reader)
     stmt = sqlalchemy.select(model.Contracts)
+    if params_user_id:
+        stmt = stmt.where(model.Contracts.user_id == params_user_id)
+    if params_is_active == True:
+        stmt = stmt.where(model.Contracts.valid_till >= datetime.date.today())
     rows = session.execute(stmt).all()
     mapping = [row._mapping["Contracts"] for row in rows]
 
@@ -686,7 +693,7 @@ def edit_contracts(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -742,7 +749,7 @@ def delete_contract(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -766,7 +773,7 @@ def save_contract():
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.HEAD_OF_HUMAN_RESOURCES, role)
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),

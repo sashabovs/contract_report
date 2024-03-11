@@ -127,7 +127,7 @@ def delete_user(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.ADMINISTRATOR, role)
+        token_utils.check_role([db_utils.Role.ADMINISTRATOR], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),
@@ -154,7 +154,7 @@ def save_user(id):
             status=400,
         )
     try:
-        token_utils.check_role(db_utils.Role.ADMINISTRATOR, role)
+        token_utils.check_role([db_utils.Role.ADMINISTRATOR], role)
     except RuntimeError as e:
         return flask.Response(
             str(e),

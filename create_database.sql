@@ -287,8 +287,7 @@ GRANT DELETE, UPDATE, SELECT, INSERT ON TABLE contract_report.reported_parameter
 CREATE TABLE contract_report.report_parameter_confirmations
 (
     id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-    report_id integer NOT NULL,
-	parameter_id integer NOT NULL,
+    report_parameter_id integer NOT NULL,
 	confirmation bytea,
     PRIMARY KEY (id)
 );
@@ -468,3 +467,11 @@ ALTER TABLE IF EXISTS contract_report.parameters_templates
 CREATE INDEX IF NOT EXISTS fki_parameters_templates_inspection_period_fk
     ON contract_report.parameters_templates(inspection_period_id);
 
+ALTER TABLE IF EXISTS contract_report.report_parameter_confirmations
+    ADD CONSTRAINT report_parameter_confirmations_reported_parameter_fk FOREIGN KEY (reported_parameter_id)
+    REFERENCES contract_report.reported_parameters (id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+    NOT VALID;
+CREATE INDEX IF NOT EXISTS fki_report_parameter_confirmations_reported_parameter_fk
+    ON contract_report.report_parameter_confirmations(reported_parameter_id);
