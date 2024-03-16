@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-
-
+from contextlib import contextmanager
 from enum import Enum, auto
 import bcrypt
 import sqlalchemy
@@ -43,3 +42,15 @@ def check_password(plain_text_password, hashed_password):
     return bcrypt.checkpw(plain_text_password.encode(), hashed_password.encode())
 
 
+@contextmanager
+def auto_session(engine):
+    sess = sqlalchemy.orm.Session(engine)
+    try:
+        yield sess
+        sess.commit()
+        # sess.refresh()
+    except Exception as e:
+        sess.rollback()
+        raise e
+    finally:
+        sess.close()

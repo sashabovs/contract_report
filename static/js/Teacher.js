@@ -7,6 +7,7 @@ export default {
     data() {
         return {
             isEditingReport: false,
+            isEditingReportParameters: false,
             reports: [],
             report: {"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false},
 
@@ -22,6 +23,7 @@ export default {
         selectReport(report_id){
             this.selected_report = report_id;
             this.getReportedParameters(report_id);
+            this.isEditingReportParameters=true;
         },
         getContracts() {
             axios.get('/contracts', {
@@ -210,6 +212,7 @@ export default {
             })
             .then((res) => {
                 this.getReportedParameters(this.selected_report);
+                this.isEditingReportParameters=false;
             })
             .catch((error) => {
               console.log(error.response.data);
@@ -223,11 +226,6 @@ export default {
                         formData.append("reported_parameter_confirmation_id", this.reported_parameters[i].confirmation_file.id);
                     }
 
-//                    await fetch('/upload_file', {
-//                      method: "POST",
-//                      body: formData
-//                    });
-
                     axios.post('reported-parameters/' + this.reported_parameters[i].id + '/upload_file', formData, {
                         headers: {
                             'Token': Token.token,
@@ -235,16 +233,17 @@ export default {
                         }
                     })
                     .then((res) => {
-//                        this.getReportedParameters(this.selected_report);
+
                     })
                     .catch((error) => {
                       console.log(error.response.data);
                     })
-
-//                    document["upload-file-" + i].submit();
                 }
-
             }
+        },
+        cancelReportedParameter() {
+            this.isEditingReportParameters = false;
+            this.selected_report=-1;
         },
 
         onFileChanged(item, event) {
@@ -260,74 +259,82 @@ export default {
         this.getContracts();
     },
     template: `
-        <button id="add-report" v-on:click="onAddReportClick">Add report</button>
-        <table id="reports-list">
-            <tr>
-                <th>Report period</th>
-                <th>Contract</th>
-                <th>Signed by teacher</th>
-                <th>Signed by head of cathedra</th>
-                <th>Signed by inspectors</th>
-                <th>Signed by head of human resources</th>
-                <th></th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
-                <td v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
-                <td>{{ item.contract_name }}</td>
-                <td>{{ item.signed_by_teacher }}</td>
-                <td>{{ item.signed_by_head_of_cathedra }}</td>
-                <td>{{ item.signed_by_inspectors }}</td>
-                <td>{{ item.signed_by_head_of_human_resources }}</td>
-                <td v-on:click="editReport(item)">Edit</td>
-                <td v-on:click="deleteReport(item.id)">Delete</td>
-                <td v-on:click="signReport(item.id)">Sign</td>
-            </tr>
-        </table>
+        <div class="centered-div">
+            <button id="add-report" v-on:click="onAddReportClick">Add report</button>
+            <table id="reports-list">
+                <tr>
+                    <th>Report period</th>
+                    <th>Contract</th>
+                    <th>Signed by teacher</th>
+                    <th>Signed by head of cathedra</th>
+                    <th>Signed by inspectors</th>
+                    <th>Signed by head of human resources</th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
+                    <td v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
+                    <td>{{ item.contract_name }}</td>
+                    <td>{{ item.signed_by_teacher }}</td>
+                    <td>{{ item.signed_by_head_of_cathedra }}</td>
+                    <td>{{ item.signed_by_inspectors }}</td>
+                    <td>{{ item.signed_by_head_of_human_resources }}</td>
+                    <td v-on:click="editReport(item)">Edit</td>
+                    <td v-on:click="deleteReport(item.id)">Delete</td>
+                    <td v-on:click="signReport(item.id)">Sign</td>
+                </tr>
+            </table>
 
-        <div id='edit-report' v-show="isEditingReport">
-            <label for="report-period-date">Report period:</label>
-            <input name="report-period-date" id="report-period-date" v-model="report.period_of_report" type="date"/>
+            <div class="modal-background" v-show="isEditingReport">
+                <div class="fully-centered-div" id='edit-report'>
+                    <label for="report-period-date">Report period:</label>
+                    <input name="report-period-date" id="report-period-date" v-model="report.period_of_report" type="date"/>
 
-            <label for="report-contract">Contract:</label>
-            <input id="report-contract" type="search" list="contracts-list" v-model="report.contract_id">
-            <datalist id="contracts-list">
-              <option v-bind:value="item.id" v-for="(item, index) in contracts" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-            </datalist>
+                    <br>
+                    <label for="report-contract">Contract:</label>
+                    <input id="report-contract" type="search" list="contracts-list" v-model="report.contract_id">
+                    <datalist id="contracts-list">
+                      <option v-bind:value="item.id" v-for="(item, index) in contracts" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
+                    </datalist>
 
 
-            <button v-on:click="saveReport">Save</button>
-            <button v-on:click="cancelReport">Cancel</button>
+                    <button v-on:click="saveReport">Save</button>
+                    <button v-on:click="cancelReport">Cancel</button>
 
+                </div>
+            </div>
+
+            <div class="modal-background" v-show="isEditingReportParameters">
+                <div class="fully-centered-div" id='reported-parameters-div'>
+                    <table id="reported-parameters-list">
+                        <tr>
+                            <th>Parameter name</th>
+                            <th>Done</th>
+                            <th>Confirmation</th>
+                            <th>Inspectors comment</th>
+                            <th>Signed by inspector</th>
+                        </tr>
+                        <tr class="reported-parameter-item" v-for="(item, index) in reported_parameters" v-bind:id="item.id" v-bind:key="item.id">
+                            <td>{{ item.parameter_name }}</td>
+                            <td><input v-model="item.done"></td>
+                            <td><input v-model="item.confirmation_text">
+                                <input v-bind:id="'upload-file-' + index"
+                                  type="file"
+                                  @change="onFileChanged(item, $event)"
+                                  capture
+                                />
+                                <label v-if="item.confirmation_file" v-on:click="downloadFile(item)">{{ item.confirmation_file.file_name }}</label>
+                            </td>
+                            <td>{{ item.inspector_comment }}</td>
+                            <td>{{ item.signed_by_inspector }}</td>
+                        </tr>
+                    </table>
+                    <button v-on:click="saveReportedParameters">Save</button>
+                    <button v-on:click="cancelReportedParameter">Cancel</button>
+                </div>
+            </div>
         </div>
-
-
-        <table id="reported-parameters-list">
-            <tr>
-                <th>Parameter name</th>
-                <th>Done</th>
-                <th>Confirmation</th>
-                <th>Inspectors comment</th>
-                <th>Signed by inspector</th>
-            </tr>
-            <tr class="reported-parameter-item" v-for="(item, index) in reported_parameters" v-bind:id="item.id" v-bind:key="item.id">
-                <td>{{ item.parameter_name }}</td>
-                <td><input v-model="item.done"></td>
-                <td><input v-model="item.confirmation_text">
-                    <input v-bind:id="'upload-file-' + index"
-                      type="file"
-                      @change="onFileChanged(item, $event)"
-                      capture
-                    />
-                    <label v-if="item.confirmation_file" v-on:click="downloadFile(item)">{{ item.confirmation_file.file_name }}</label>
-                </td>
-                <td>{{ item.inspector_comment }}</td>
-                <td>{{ item.signed_by_inspector }}</td>
-            </tr>
-        </table>
-        <button v-on:click="saveReportedParameters">Save</button>
-
     `,
 };
 

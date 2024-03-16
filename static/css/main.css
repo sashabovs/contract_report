@@ -9,42 +9,58 @@ div {
     box-sizing: border-box;
 }
 
+table{
+    border-collapse:collapse;
+    border:1px solid #AAAAAA;
+}
+
+table td, table th{
+    border:1px solid #AAAAAA;
+    padding: 0 5px;
+}
+
 #app {
     height: 100%;
 }
 
-#header {
-    height: 50px;
+// #header {
+//    height: 50px;
+//    width: 100%;
+//    padding: 5px;
+//}
+
+.centered-div {
+    margin: auto;
+    width: 50%;
+}
+
+.modal-background {
     width: 100%;
-    padding: 5px;
-}
-
-#main-panel {
-  height: calc(100% - 50px);
-  width: 100%;
-}
-
-#left-panel {
-    vertical-align: top;
-    width: 300px;
     height: 100%;
-    overflow: scroll;
-    float: left;
+    background: rgba(188, 187, 188, 0.6);
+    position: absolute;
+    left: 0;
+    top: 0;
 }
 
-#map-container {
-    width: calc(100% - 305px);
-    height: 100%;
-    display: inline-block;
+.fully-centered-div {
+    margin: auto;
+    width: 200px;
+    height: 300px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-radius: 10px;
+    padding: 10px;
 }
 
-#traces-list{
-    height: calc(100% - 30px);
-    overflow: scroll;
-    margin: 0;
-    margin-left: 10px;
+.selected-row {
+    background-color: blanchedalmond;
 }
 
-.trace.selected {
-    background: lightskyblue;
+.section-header {
+    margin: 10px 0;
 }

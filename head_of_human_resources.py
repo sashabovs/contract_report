@@ -29,20 +29,21 @@ def get_units():
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = sqlalchemy.select(model.ParameterUnits)
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["ParameterUnits"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(model.ParameterUnits).order_by(model.ParameterUnits.name)
+        rows = session.execute(stmt).all()
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "name": row.name,
-            }
-            for row in mapping
-        ]
-    )
+        mapping = [row._mapping["ParameterUnits"] for row in rows]
+
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "name": row.name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/inspectors")
@@ -63,22 +64,22 @@ def get_inspectors():
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = sqlalchemy.select(model.Users).where(
-        model.Users.role == db_utils.Role.INSPECTOR.value
-    )
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["Users"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(model.Users).where(
+            model.Users.role == db_utils.Role.INSPECTOR.value
+        )
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["Users"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "full_name": row.full_name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "full_name": row.full_name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/contract-templates")
@@ -99,20 +100,20 @@ def get_contract_templates():
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = sqlalchemy.select(model.ContractTemplates)
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["ContractTemplates"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(model.ContractTemplates)
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["ContractTemplates"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "name": row.name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "name": row.name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/contract-templates/<int:id>", methods=["PUT"])
@@ -235,30 +236,30 @@ def get_parameters():
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = (
-        sqlalchemy.select(
-            model.Parameters, model.ParameterUnits.name, model.Users.full_name
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = (
+            sqlalchemy.select(
+                model.Parameters, model.ParameterUnits.name, model.Users.full_name
+            )
+            .join(model.Parameters.unit, isouter=True)
+            .join(model.Parameters.inspector, isouter=True)
         )
-        .join(model.Parameters.unit, isouter=True)
-        .join(model.Parameters.inspector, isouter=True)
-    )
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["Parameters"] for row in rows]
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["Parameters"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "name": row.name,
-                "unit_id": row.unit_id,
-                "inspector_id": row.inspector_id,
-                "unit": row.unit.name,
-                "inspector": row.inspector.full_name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "name": row.name,
+                    "unit_id": row.unit_id,
+                    "inspector_id": row.inspector_id,
+                    "unit": row.unit.name,
+                    "inspector": row.inspector.full_name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/parameters/<int:id>", methods=["PUT"])
@@ -395,20 +396,20 @@ def get_inspection_periods():
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = sqlalchemy.select(model.InspectionPeriods)
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["InspectionPeriods"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(model.InspectionPeriods)
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["InspectionPeriods"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "name": row.name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "name": row.name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/parameters-in-template/<int:id>")
@@ -429,30 +430,30 @@ def get_parameters_in_template(id):
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = sqlalchemy.select(model.ParametersTemplates).where(
-        model.ParametersTemplates.template_id == id
-    )
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["ParametersTemplates"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(model.ParametersTemplates).where(
+            model.ParametersTemplates.template_id == id
+        )
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["ParametersTemplates"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "template_id": row.template_id,
-                "parameter_id": row.parameter_id,
-                "needs_inspection": row.needs_inspection,
-                "inspection_period_id": row.inspection_period_id,
-                "requirement": row.requirement,
-                "points_promised": row.points_promised,
-                "template_name": row.template.name,
-                "parameter_name": row.parameter.name,
-                "inspection_period_name": row.inspection_period.name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "template_id": row.template_id,
+                    "parameter_id": row.parameter_id,
+                    "needs_inspection": row.needs_inspection,
+                    "inspection_period_id": row.inspection_period_id,
+                    "requirement": row.requirement,
+                    "points_promised": row.points_promised,
+                    "template_name": row.template.name,
+                    "parameter_name": row.parameter.name,
+                    "inspection_period_name": row.inspection_period.name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/parameters-in-template/<int:id>", methods=["PUT"])
@@ -615,24 +616,24 @@ def get_teachers_without_contract():
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = (
-        sqlalchemy.select(model.Users)
-        .where(model.Users.role == db_utils.Role.TEACHER.value)
-        .where(model.Users.id != model.Contracts.user_id)
-    )
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["Users"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = (
+            sqlalchemy.select(model.Users)
+            .where(model.Users.role == db_utils.Role.TEACHER.value)
+            .where(model.Users.id != model.Contracts.user_id)
+        )
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["Users"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "name": row.full_name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "name": row.full_name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/contracts")
@@ -648,38 +649,41 @@ def get_contracts():
             status=400,
         )
     try:
-        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES, db_utils.Role.TEACHER], role)
+        token_utils.check_role(
+            [db_utils.Role.HEAD_OF_HUMAN_RESOURCES, db_utils.Role.TEACHER], role
+        )
     except RuntimeError as e:
         return flask.Response(
             str(e),
             status=400,
         )
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = sqlalchemy.select(model.Contracts)
-    if params_user_id:
-        stmt = stmt.where(model.Contracts.user_id == params_user_id)
-    if params_is_active == True:
-        stmt = stmt.where(model.Contracts.valid_till >= datetime.date.today())
-    rows = session.execute(stmt).all()
-    mapping = [row._mapping["Contracts"] for row in rows]
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(model.Contracts)
+        if params_user_id:
+            stmt = stmt.where(model.Contracts.user_id == params_user_id)
+        if params_is_active == True:
+            stmt = stmt.where(model.Contracts.valid_till >= datetime.date.today())
+        stmt = stmt.order_by(model.Contracts.signing_date)
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["Contracts"] for row in rows]
 
-    return json.dumps(
-        [
-            {
-                "id": row.id,
-                "user_id": row.user_id,
-                "signing_date": str(row.signing_date),
-                "valid_from": str(row.valid_from),
-                "valid_till": str(row.valid_till),
-                "template_id": row.template_id,
-                "required_points": row.required_points,
-                "user_name": row.user.full_name,
-                "template_name": row.template.name,
-            }
-            for row in mapping
-        ]
-    )
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "user_id": row.user_id,
+                    "signing_date": str(row.signing_date),
+                    "valid_from": str(row.valid_from),
+                    "valid_till": str(row.valid_till),
+                    "template_id": row.template_id,
+                    "required_points": row.required_points,
+                    "user_name": row.user.full_name,
+                    "template_name": row.template.name,
+                }
+                for row in mapping
+            ]
+        )
 
 
 @head_of_human_resources_app.route("/contracts/<int:id>", methods=["PUT"])

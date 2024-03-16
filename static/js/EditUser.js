@@ -34,10 +34,6 @@ export default {
             this.$router.back();
         },
 
-//        is_selected_job_title(item_id){
-//            return item_id === this.user.job_title_id ? "selected" : null;
-//        }
-
     },
     mounted() {
         axios.get('/job_titles', {

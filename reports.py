@@ -15,66 +15,132 @@ reports_app = flask.Blueprint("reports_app", __name__)
 
 @reports_app.route("/reports")
 def get_reports():
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role(
+            [
+                db_utils.Role.TEACHER,
+                db_utils.Role.HEAD_OF_CATHEDRA,
+                db_utils.Role.INSPECTOR,
+                db_utils.Role.HEAD_OF_HUMAN_RESOURCES,
+            ],
+            role,
+        )
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
     params_user_id = flask.request.args.get("user_id")
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = (
-        sqlalchemy.select(
-            model.Reports.id,
-            model.Reports.period_of_report,
-            model.Reports.contract_id,
-            model.Contracts.user_id,
-            model.Contracts.valid_from,
-            model.Contracts.valid_till,
-            model.Reports.signed_by_teacher,
-            model.Reports.signed_by_head_of_cathedra,
-            model.Reports.signed_by_head_of_human_resources,
-        )
-        .join(model.Reports.contract)
-        .where(model.Contracts.user_id == params_user_id)
-    )
-    rows = session.execute(stmt).all()
-
-    stmt = (
-        sqlalchemy.select(
-            model.ReportedParameters.report_id,
-            sqlalchemy.func.min(
-                model.ReportedParameters.signed_by_inspector.cast(sqlalchemy.Integer)
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = (
+            sqlalchemy.select(
+                model.Reports.id,
+                model.Reports.period_of_report,
+                model.Reports.contract_id,
+                model.Contracts.user_id,
+                model.Contracts.valid_from,
+                model.Contracts.valid_till,
+                model.Reports.signed_by_teacher,
+                model.Reports.signed_by_head_of_cathedra,
+                model.Reports.signed_by_head_of_human_resources,
             )
-            .cast(sqlalchemy.Boolean)
-            .label("signed_by_inspector"),
+            .join(model.Reports.contract)
+            .join(model.Users, onclause=model.Users.id == model.Contracts.user_id)
         )
-        .where(model.ReportedParameters.report_id.in_([row[0] for row in rows]))
-        .group_by(model.ReportedParameters.report_id)
-    )
-    rows_signed_by_inspector = session.execute(stmt).all()
-    signed_by_inspector_dict = {row[0]: row[1] for row in rows_signed_by_inspector}
-    return json.dumps(
-        [
-            {
-                "id": row[0],
-                "period_of_report": str(row[1]),
-                "contract_id": row[2],
-                "user_id": row[3],
-                "valid_from": str(row[4]),
-                "valid_till": str(row[5]),
-                "signed_by_teacher": row[6],
-                "signed_by_inspector": signed_by_inspector_dict.get(row[0], False),
-                "signed_by_head_of_cathedra": row[7],
-                "signed_by_head_of_human_resources": row[8],
-            }
-            for row in rows
-        ]
-    )
+
+        if role == db_utils.Role.TEACHER.value:
+            stmt = stmt.where(model.Contracts.user_id == params_user_id)
+        elif role == db_utils.Role.HEAD_OF_CATHEDRA.value:
+            temp = sqlalchemy.select(model.Cathedras.id).where(
+                model.Cathedras.head_id == params_user_id
+            )
+            cathedra = session.execute(temp).first()
+            stmt = (
+                stmt.where(model.Reports.signed_by_teacher == True)
+                .where(model.Reports.signed_by_head_of_cathedra == False)
+                .where(model.Users.cathedra_id == int(cathedra[0]))
+            )
+        elif role == db_utils.Role.HEAD_OF_HUMAN_RESOURCES.value:
+
+            stmt = (
+                stmt.where(model.Reports.signed_by_teacher == True)
+                .where(model.Reports.signed_by_head_of_cathedra == True)
+                .where(model.Reports.signed_by_head_of_human_resources == False)
+            )
+
+        rows = session.execute(stmt).all()
+
+        stmt = (
+            sqlalchemy.select(
+                model.ReportedParameters.report_id,
+                sqlalchemy.func.min(
+                    model.ReportedParameters.signed_by_inspector.cast(sqlalchemy.Integer)
+                )
+                .cast(sqlalchemy.Boolean)
+                .label("signed_by_inspector"),
+            )
+            .where(model.ReportedParameters.report_id.in_([row[0] for row in rows]))
+            .group_by(model.ReportedParameters.report_id)
+        )
+        rows_signed_by_inspector = session.execute(stmt).all()
+        signed_by_inspector_dict = {row[0]: row[1] for row in rows_signed_by_inspector}
+        return json.dumps(
+            [
+                {
+                    "id": row[0],
+                    "period_of_report": str(row[1]),
+                    "contract_id": row[2],
+                    "user_id": row[3],
+                    "valid_from": str(row[4]),
+                    "valid_till": str(row[5]),
+                    "signed_by_teacher": row[6],
+                    "signed_by_inspector": signed_by_inspector_dict.get(row[0], False),
+                    "signed_by_head_of_cathedra": row[7],
+                    "signed_by_head_of_human_resources": row[8],
+                }
+                for row in rows
+            ]
+        )
 
 
 @reports_app.route("/reported-parameters")
 def get_reported_parameters():
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role(
+            [
+                db_utils.Role.TEACHER,
+                db_utils.Role.HEAD_OF_CATHEDRA,
+                db_utils.Role.INSPECTOR,
+                db_utils.Role.HEAD_OF_HUMAN_RESOURCES,
+            ],
+            role,
+        )
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
     params_report_id = flask.request.args.get("report_id", type=int)
 
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = (
-        sqlalchemy.select(
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(
             model.ReportedParameters.id,
             model.ReportedParameters.report_id,
             model.ReportedParameters.parameter_id,
@@ -83,42 +149,66 @@ def get_reported_parameters():
             model.ReportedParameters.confirmation_text,
             model.ReportedParameters.inspector_comment,
             model.ReportedParameters.signed_by_inspector,
-        )
-        .join(model.ReportedParameters.parameter)
-        .where(model.ReportedParameters.report_id == params_report_id)
-    )
-    rows = session.execute(stmt).all()
+        ).join(model.ReportedParameters.parameter)
 
-    stmt = sqlalchemy.select(
-        model.ReportParameterConfirmations.reported_parameter_id,
-        model.ReportParameterConfirmations.id,
-        model.ReportParameterConfirmations.file_name,
-    ).where(
-        model.ReportParameterConfirmations.reported_parameter_id.in_(
-            [row[0] for row in rows]
-        )
-    )
-    confirmations = session.execute(stmt).all()
-    confirmation_dict = {
-        row[0]: {"id": row[1], "file_name": row[2]} for row in confirmations
-    }
+        if params_report_id:
+            stmt = stmt.where(model.ReportedParameters.report_id == params_report_id)
 
-    return json.dumps(
-        [
-            {
-                "id": row[0],
-                "report_id": row[1],
-                "parameter_id": row[2],
-                "parameter_name": row[3],
-                "done": row[4],
-                "confirmation_text": row[5],
-                "inspector_comment": row[6],
-                "signed_by_inspector": row[7],
-                "confirmation_file": confirmation_dict.get(row[0]),
-            }
-            for row in rows
-        ]
-    )
+        params_inspector_id = flask.request.args.get("inspector_id")
+        if role == db_utils.Role.INSPECTOR.value:
+            # stmt = (
+            #     stmt.join(
+            #         model.Reports, model.Reports.id == model.ReportedParameters.report_id
+            #     )
+            #     .join(model.Contracts, model.Reports.contract_id == model.Contracts.id)
+            #     .join(model.Users, model.Users.id == model.Contracts.user_id)
+            # )
+            stmt = stmt.join(model.ReportedParameters.report).where(model.Reports.signed_by_head_of_cathedra == True)
+
+            if params_inspector_id:
+                stmt = stmt.where(
+                    model.Parameters.inspector_id == params_inspector_id
+                ).where(model.ReportedParameters.signed_by_inspector == False)
+            else:
+                return flask.Response(
+                    "No inspector id",
+                    status=400,
+                )
+
+
+
+        rows = session.execute(stmt).all()
+
+        stmt = sqlalchemy.select(
+            model.ReportParameterConfirmations.reported_parameter_id,
+            model.ReportParameterConfirmations.id,
+            model.ReportParameterConfirmations.file_name,
+        ).where(
+            model.ReportParameterConfirmations.reported_parameter_id.in_(
+                [row[0] for row in rows]
+            )
+        )
+        confirmations = session.execute(stmt).all()
+        confirmation_dict = {
+            row[0]: {"id": row[1], "file_name": row[2]} for row in confirmations
+        }
+
+        return json.dumps(
+            [
+                {
+                    "id": row[0],
+                    "report_id": row[1],
+                    "parameter_id": row[2],
+                    "parameter_name": row[3],
+                    "done": row[4],
+                    "confirmation_text": row[5],
+                    "inspector_comment": row[6],
+                    "signed_by_inspector": row[7],
+                    "confirmation_file": confirmation_dict.get(row[0]),
+                }
+                for row in rows
+            ]
+        )
 
 
 @reports_app.route("/reports/<int:id>", methods=["DELETE"])
@@ -284,6 +374,43 @@ def edit_report(id):
     return flask.Response(status=200)
 
 
+@reports_app.route("/reported-parameters/<int:id>/sign", methods=["POST"])
+def sign_reported_parameter(id):
+
+    data = flask.request.get_json()
+
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role(
+            [
+                db_utils.Role.INSPECTOR,
+            ],
+            role,
+        )
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    session = sqlalchemy.orm.Session(db_utils.engine_writer)
+    stmt = session.query(model.ReportedParameters).filter(
+        model.ReportedParameters.id == id
+    )
+
+    stmt.update({model.ReportedParameters.signed_by_inspector: True})
+
+    session.commit()
+
+    return flask.Response(status=200)
+
+
 @reports_app.route("/reports/<int:id>/sign", methods=["POST"])
 def sign_report(id):
 
@@ -320,6 +447,45 @@ def sign_report(id):
         stmt.update({model.Reports.signed_by_head_of_cathedra: True})
     elif role == db_utils.Role.HEAD_OF_HUMAN_RESOURCES.value:
         stmt.update({model.Reports.signed_by_head_of_human_resources: True})
+
+    session.commit()
+
+    return flask.Response(status=200)
+
+
+@reports_app.route("/reports/<int:id>/sign", methods=["DELETE"])
+def unsign_report(id):
+
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role(
+            [
+                db_utils.Role.INSPECTOR,
+            ],
+            role,
+        )
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+
+    session = sqlalchemy.orm.Session(db_utils.engine_writer)
+    stmt = session.query(model.Reports).filter(model.Reports.id == id)
+
+    stmt.update(
+        {
+            model.Reports.signed_by_teacher: False,
+            model.Reports.signed_by_head_of_cathedra: False,
+        }
+    )
 
     session.commit()
 
@@ -406,14 +572,17 @@ def upload_confirmation(id):
         "reported_parameter_confirmation_id" in flask.request.form
         and flask.request.form.get("reported_parameter_confirmation_id")
     ):
-        reported_parameter_confirmation_id = flask.request.form.get("reported_parameter_confirmation_id", type=int)
+        reported_parameter_confirmation_id = flask.request.form.get(
+            "reported_parameter_confirmation_id", type=int
+        )
         session.query(model.ReportParameterConfirmations).filter(
             model.ReportParameterConfirmations.id == reported_parameter_confirmation_id
         ).update(
             {
                 model.ReportParameterConfirmations.file_name: filename,
                 model.ReportParameterConfirmations.confirmation: binary,
-            })
+            }
+        )
     else:
         confirmation = model.ReportParameterConfirmations(
             reported_parameter_id=id,
@@ -428,24 +597,18 @@ def upload_confirmation(id):
 
 @reports_app.route("/reported-parameter-confirmations/<int:id>/download-file")
 def get_reported_parameter_confirmation_file(id):
-
-    session = sqlalchemy.orm.Session(db_utils.engine_reader)
-    stmt = (
-        sqlalchemy.select(
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = sqlalchemy.select(
             model.ReportParameterConfirmations.confirmation,
             model.ReportParameterConfirmations.file_name,
-        )
-        .where(model.ReportParameterConfirmations.id == id)
-    )
-    row = session.execute(stmt).first()
+        ).where(model.ReportParameterConfirmations.id == id)
+        row = session.execute(stmt).first()
 
-    binary_data_encoded = base64.b64encode(row[0])
+        binary_data_encoded = base64.b64encode(row[0])
 
-    return json.dumps(
+        return json.dumps(
             {
-                "binary": binary_data_encoded.decode('ascii'),
+                "binary": binary_data_encoded.decode("ascii"),
                 "file_name": row[1],
             }
-    )
-
-
+        )

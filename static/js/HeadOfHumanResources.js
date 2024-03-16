@@ -8,6 +8,9 @@ export default {
     data() {
         return {
             contract_templates: [],
+            isEditingTemplate: false,
+            contract_template: {},
+
             parameters: [],
             units: [],
             inspectors: [],
@@ -24,6 +27,11 @@ export default {
             contract: {},
             teachers_without_contract: [],
             isEditingContract: false,
+
+            isEditingReportParameters: false,
+            selected_report : -1,
+            reported_parameters: [],
+            reports: [],
         };
     },
     methods: {
@@ -46,11 +54,12 @@ export default {
               console.log(error.response.data);
             })
         },
-        onAddContractTemplate(){
-            let template = prompt("Please enter template name", "");
-
-            if (template != null) {
-                let body = {"name": template}
+        saveTemplate(){
+            if(!this.contract_template.name){
+                return;
+            }
+            if(!this.contract_template.id){
+                let body = {"name": this.contract_template.name}
                 axios.post('/contract-templates', body, {
                     headers: {
                         'Token': Token.token,
@@ -58,31 +67,41 @@ export default {
                 })
                 .then((res) => {
                     this.getContractTemplates();
+                    this.isEditingTemplate=false;
                 })
                 .catch((error) => {
                   console.log(error.response.data);
                 })
-            }
-        },
-
-        editContractTemplate(contract_template_id){
-            let template = prompt("Please enter template name", "");
-
-            if (template != null) {
-                let body = {"name": template}
-                axios.put('/contract-templates/' + contract_template_id, body, {
+            }else{
+                let body = {"name": this.contract_template.name}
+                axios.put('/contract-templates/' + this.contract_template.id, body, {
                     headers: {
                         'Token': Token.token,
                     }
                 })
                 .then((res) => {
                     this.getContractTemplates();
+                    this.isEditingTemplate=false;
                 })
                 .catch((error) => {
                   console.log(error.response.data);
                 })
+
             }
         },
+        cancelTemplate() {
+            this.isEditingTemplate = false;
+            this.contract_template = {};
+        },
+        addTemplate(){
+            this.isEditingTemplate = true;
+            this.contract_template={name:"",id:""};
+        },
+        editTemplate(contract_template){
+            this.isEditingTemplate = true;
+            this.contract_template=contract_template;
+        },
+
         deleteContractTemplate(contract_template_id){
             if (!confirm('Do you want to delete template?')){
                 return;
@@ -361,6 +380,103 @@ export default {
             .catch((error) => {
               console.log(error.response.data);
             })
+        },
+        cancelReportedParameter(){
+            this.isEditingReportParameters = false;
+            this.selected_report=-1;
+        },
+        downloadFile(reported_parameter){
+            var base64ToArrayBuffer = function (base64) {
+                var binaryString =  window.atob(base64);
+                var binaryLen = binaryString.length;
+                var bytes = new Uint8Array(binaryLen);
+                for (var i = 0; i < binaryLen; i++)        {
+                    var ascii = binaryString.charCodeAt(i);
+                    bytes[i] = ascii;
+                }
+                return bytes;
+            }
+
+            var saveByteArray = (function () {
+                var a = document.createElement("a");
+                document.body.appendChild(a);
+                a.style = "display: none";
+                return function (data, name) {
+                    var blob = new Blob(data, {type: "octet/stream"}),
+                        url = window.URL.createObjectURL(blob);
+                    a.href = url;
+                    a.download = name;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                };
+            }());
+            axios.get('/reported-parameter-confirmations/' + reported_parameter.confirmation_file.id + '/download-file', {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                let decoded_file = base64ToArrayBuffer(res.data.binary);
+                saveByteArray([decoded_file], res.data.file_name);
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+
+        },
+        signReport(report_id) {
+            axios.post('/reports/' + report_id +'/sign', {}, {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.getReports();
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+        },
+        selectReport(report_id){
+            this.selected_report = report_id;
+            this.getReportedParameters(report_id);
+            this.isEditingReportParameters=true;
+        },
+
+        getReports() {
+            axios.get('/reports', {
+                params:{
+                    is_active: true
+                },
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.reports = res.data;
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+        },
+        getReportedParameters(report_id) {
+            axios.get('/reported-parameters', {
+                params:{
+                    report_id: report_id
+                },
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.reported_parameters = res.data;
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+        },
+        goToDataReports(){
+            this.$router.replace('data-reports');
         }
     },
     mounted() {
@@ -368,6 +484,7 @@ export default {
         this.getParameters();
         this.getContracts();
         this.getTeachersWithoutContract();
+        this.getReports();
 
         axios.get('/units', {
             headers: {
@@ -406,161 +523,248 @@ export default {
         })
     },
     template: `
-        <button id="add-contract-template" v-on:click="onAddContractTemplate">Add contract template</button>
-        <table id="contract-templates-list">
-            <tr>
-                <th>Name</th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr class="contract-templates-item" v-for="(item, index) in contract_templates" v-bind:id="item.id" v-bind:key="item.id">
-                <td v-on:click="selectContractTemplate(item.id)">{{ item.name }}</td>
-                <td v-on:click="editContractTemplate(item.id)">Edit</td>
-                <td v-on:click="deleteContractTemplate(item.id)">Delete</td>
-            </tr>
-        </table>
+        <div class="centered-div">
+            <div class="section-header"><a v-on:click="goToDataReports">Data Reports</a></div>
 
-        <button id="add-parameter" v-on:click="addParameter">Add parameter</button>
-        <table id="parameter-list">
-            <tr>
-                <th>Name</th>
-                <th>Units</th>
-                <th>Inspector</th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr class="parameter-item" v-for="(item, index) in parameters" v-bind:id="item.id" v-bind:key="item.id">
-                <td>{{ item.name }}</td>
-                <td>{{ item.unit }}</td>
-                <td>{{ item.inspector }}</td>
-                <td v-on:click="editParameter(item)">Edit</td>
-                <td v-on:click="deleteParameter(item.id)">Delete</td>
-            </tr>
-        </table>
-
-        <div id='edit-parameter' v-show="isEditingParameter">
-            <label for="parameter-name">Full name:</label>
-            <input id="parameter-name" required v-model="parameter.name">
-
-            <label for="parameter-units">Unit:</label>
-            <select name="parameter-units" id="parameter-units" v-model="parameter.unit_id">
-                  <option value=""></option>
-                  <option v-bind:value="item.id" v-for="(item, index) in units" v-bind:key="item.id">{{ item.name }}</option>
-            </select>
-
-            <label for="parameter-inspectors">Inspector:</label>
-            <input id="parameter-inspectors" type="search" list="parameter-inspectors-list" v-model="parameter.inspector_id">
-            <datalist id="parameter-inspectors-list">
-              <option v-bind:value="item.id" v-for="(item, index) in inspectors" v-bind:key="item.id">{{ item.full_name }} ({{ item.id }})</option>
-            </datalist>
-
-            <button v-on:click="saveParameter">Save</button>
-            <button v-on:click="cancelParameter">Cancel</button>
-
-        </div>
-        ///////////////////////////////////////////
-
-        <button id="add-parameter-to-template" v-on:click="addParameterToTemplate">Add parameter</button>
-        <table id="parameters-in-template-list">
-            <tr>
-                <th>Name</th>
-                <th>Needs inspection</th>
-                <th>Inspection period</th>
-                <th>Requirement</th>
-                <th>Points promised</th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr class="parameters-in-template-item" v-for="(item, index) in parameters_in_template" v-bind:id="item.id" v-bind:key="item.id">
-                <td>{{ item.parameter_name }}</td>
-                <td>{{ item.needs_inspection }}</td>
-                <td>{{ item.inspection_period_name }}</td>
-                <td>{{ item.requirement }}</td>
-                <td>{{ item.points_promised }}</td>
-                <td v-on:click="editParameterToTemplate(item)">Edit</td>
-                <td v-on:click="deleteParameterToTemplate(item.id)">Delete</td>
-            </tr>
-        </table>
-
-        <div id='edit-parameter-in-template' v-show="isEditingParameterInTemplate">
-            <label for="parameter-in-template-parameters">Parameter:</label>
-            <input id="parameter-in-template-parameters" type="search" list="parameter-in-template-list" v-model="parameter_in_template.parameter_id">
-            <datalist id="parameter-in-template-list">
-              <option v-bind:value="item.id" v-for="(item, index) in parameters" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-            </datalist>
+            <div class="section-header">Template parameters</div>
+            <button id="add-parameter" v-on:click="addParameter">Add parameter</button>
+            <table id="parameter-list">
+                <tr>
+                    <th>Name</th>
+                    <th>Units</th>
+                    <th>Inspector</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr class="parameter-item" v-for="(item, index) in parameters" v-bind:id="item.id" v-bind:key="item.id">
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.unit }}</td>
+                    <td>{{ item.inspector }}</td>
+                    <td v-on:click="editParameter(item)">Edit</td>
+                    <td v-on:click="deleteParameter(item.id)">Delete</td>
+                </tr>
+            </table>
 
 
-            <label for="parameter-needs-inspection">Needs inspection:</label>
-            <input name="parameter-needs-inspection" id="parameter-needs-inspection" v-model="parameter_in_template.needs_inspection" type="checkbox"/>
+            <div class="modal-background" v-show="isEditingParameter">
+                <div class="fully-centered-div">
+                    <div id='edit-parameter'>
+                        <label for="parameter-name">Full name:</label>
+                        <input id="parameter-name" required v-model="parameter.name">
 
-            <label for="parameter-in-template-inspection-periods">Inspection period:</label>
-            <select name="parameter-in-template-inspection-periods" id="parameter-in-template-inspection-periods" v-model="parameter_in_template.inspection_period_id">
-                  <option value=""></option>
-                  <option v-bind:value="item.id" v-for="(item, index) in inspection_periods" v-bind:key="item.id">{{ item.name }}</option>
-            </select>
+                        <label for="parameter-units">Unit:</label>
+                        <select name="parameter-units" id="parameter-units" v-model="parameter.unit_id">
+                              <option value=""></option>
+                              <option v-bind:value="item.id" v-for="(item, index) in units" v-bind:key="item.id">{{ item.name }}</option>
+                        </select>
 
-            <label for="parameter-in-template-required">Requirements:</label>
-            <input id="parameter-in-template-required" required v-model="parameter_in_template.requirement">
+                        <br>
+                        <label for="parameter-inspectors">Inspector:</label>
+                        <input id="parameter-inspectors" type="search" list="parameter-inspectors-list" v-model="parameter.inspector_id">
+                        <datalist id="parameter-inspectors-list">
+                          <option v-bind:value="item.id" v-for="(item, index) in inspectors" v-bind:key="item.id">{{ item.full_name }} ({{ item.id }})</option>
+                        </datalist>
 
-            <label for="parameter-in-template-points-promised">Points promised:</label>
-            <input id="parameter-in-template-points-promised" required v-model="parameter_in_template.points_promised">
+                        <button v-on:click="saveParameter">Save</button>
+                        <button v-on:click="cancelParameter">Cancel</button>
 
-            <button v-on:click="saveParameterToTemplate">Save</button>
-            <button v-on:click="cancelParameterToTemplate">Cancel</button>
+                    </div>
+                </div>
+            </div>
 
-        </div>
+            <div class="section-header">Contract templates</div>
+            <button id="add-contract-template" v-on:click="addTemplate">Add contract template</button>
+            <table id="contract-templates-list">
+                <tr>
+                    <th>Name</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr class="contract-templates-item" v-bind:class="item.id == selected_template ? 'selected-row':''" v-for="(item, index) in contract_templates" v-bind:id="item.id" v-bind:key="item.id">
+                    <td v-on:click="selectContractTemplate(item.id)">{{ item.name }}</td>
+                    <td v-on:click="editTemplate(item)">Edit</td>
+                    <td v-on:click="deleteContractTemplate(item.id)">Delete</td>
+                </tr>
+            </table>
 
-
-        <button id="add-contract" v-on:click="addContract">Add contract</button>
-        <table id="contracts-list">
-            <tr>
-                <th>Person</th>
-                <th>Signing date</th>
-                <th>Valid period</th>
-                <th>Template</th>
-                <th>Required points</th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr class="contract-item" v-for="(item, index) in contracts" v-bind:id="item.id" v-bind:key="item.id">
-                <td>{{ item.user_name }}</td>
-                <td>{{ item.signing_date }}</td>
-                <td>{{ item.valid_from }}-{{ item.valid_till }}</td>
-                <td>{{ item.template_name }}</td>
-                <td>{{ item.required_points }}</td>
-                <td v-on:click="editContract(item)">Edit</td>
-                <td v-on:click="deleteContract(item.id)">Delete</td>
-            </tr>
-        </table>
-
-        <div id='edit-contract' v-show="isEditingContract">
-            <label for="contract-user">Person:</label>
-            <input id="contract-user" type="search" list="user-list" v-model="contract.user_id">
-            <datalist id="user-list">
-              <option v-bind:value="item.id" v-for="(item, index) in teachers_without_contract" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-            </datalist>
-
-
-            <label for="contract-signing-date">Signing date:</label>
-            <input name="contract-signing-date" id="contract-signing-date" v-model="contract.signing_date" type="date"/>
-
-            <label for="contract-valid-from">Valid from:</label>
-            <input name="contract-valid-from" id="contract-valid-from" v-model="contract.valid_from" type="date"/>
-
-            <label for="contract-valid-till">Valid till:</label>
-            <input name="contract-valid-till" id="contract-valid-till" v-model="contract.valid_till" type="date"/>
-
-            <label for="contract-template-select">Template:</label>
-            <select name="contract-template-select" id="contract-template-select" v-model="contract.template_id">
-                  <option v-bind:value="item.id" v-for="(item, index) in contract_templates" v-bind:key="item.id">{{ item.name }}</option>
-            </select>
+            <div class="modal-background" v-show="isEditingTemplate">
+                <div class="fully-centered-div" id='edit-contract-template'>
+                    <label for="contract-template-name">Template name:</label>
+                    <input name="contract-template-name" id="contract-template-name" v-model="contract_template.name" />
+                    <br>
+                    <button v-on:click="saveTemplate">Save</button>
+                    <button v-on:click="cancelTemplate">Cancel</button>
+                </div>
+            </div>
 
 
-            <label for="contract-points-required">Points required:</label>
-            <input id="contract-points-required" required v-model="contract.required_points">
 
-            <button v-on:click="saveContract">Save</button>
-            <button v-on:click="cancelContract">Cancel</button>
+            <div class="section-header">Parameter templates</div>
+            <button id="add-parameter-to-template" v-on:click="addParameterToTemplate">Add parameter to template</button>
+            <table id="parameters-in-template-list">
+                <tr>
+                    <th>Name</th>
+                    <th>Needs inspection</th>
+                    <th>Inspection period</th>
+                    <th>Requirement</th>
+                    <th>Points promised</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr class="parameters-in-template-item" v-for="(item, index) in parameters_in_template" v-bind:id="item.id" v-bind:key="item.id">
+                    <td>{{ item.parameter_name }}</td>
+                    <td>{{ item.needs_inspection }}</td>
+                    <td>{{ item.inspection_period_name }}</td>
+                    <td>{{ item.requirement }}</td>
+                    <td>{{ item.points_promised }}</td>
+                    <td v-on:click="editParameterToTemplate(item)">Edit</td>
+                    <td v-on:click="deleteParameterToTemplate(item.id)">Delete</td>
+                </tr>
+            </table>
+
+
+            <div class="modal-background" v-show="isEditingParameterInTemplate">
+                <div class="fully-centered-div">
+                    <div id='edit-parameter-in-template'>
+                        <label for="parameter-in-template-parameters">Parameter:</label>
+                        <input id="parameter-in-template-parameters" type="search" list="parameter-in-template-list" v-model="parameter_in_template.parameter_id">
+                        <datalist id="parameter-in-template-list">
+                          <option v-bind:value="item.id" v-for="(item, index) in parameters" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
+                        </datalist>
+
+
+                        <label for="parameter-needs-inspection">Needs inspection:</label>
+                        <input name="parameter-needs-inspection" id="parameter-needs-inspection" v-model="parameter_in_template.needs_inspection" type="checkbox"/>
+
+                        <br>
+                        <label for="parameter-in-template-inspection-periods">Inspection period:</label>
+                        <select name="parameter-in-template-inspection-periods" id="parameter-in-template-inspection-periods" v-model="parameter_in_template.inspection_period_id">
+                              <option value=""></option>
+                              <option v-bind:value="item.id" v-for="(item, index) in inspection_periods" v-bind:key="item.id">{{ item.name }}</option>
+                        </select>
+
+                        <label for="parameter-in-template-required">Requirements:</label>
+                        <input id="parameter-in-template-required" required v-model="parameter_in_template.requirement">
+
+                        <label for="parameter-in-template-points-promised">Points promised:</label>
+                        <input id="parameter-in-template-points-promised" required v-model="parameter_in_template.points_promised">
+
+                        <button v-on:click="saveParameterToTemplate">Save</button>
+                        <button v-on:click="cancelParameterToTemplate">Cancel</button>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header">Contracts</div>
+            <button id="add-contract" v-on:click="addContract">Add contract</button>
+            <table id="contracts-list">
+                <tr>
+                    <th>Person</th>
+                    <th>Signing date</th>
+                    <th>Valid period</th>
+                    <th>Template</th>
+                    <th>Required points</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr class="contract-item" v-for="(item, index) in contracts" v-bind:id="item.id" v-bind:key="item.id">
+                    <td>{{ item.user_name }}</td>
+                    <td>{{ item.signing_date }}</td>
+                    <td>{{ item.valid_from }}-{{ item.valid_till }}</td>
+                    <td>{{ item.template_name }}</td>
+                    <td>{{ item.required_points }}</td>
+                    <td v-on:click="editContract(item)">Edit</td>
+                    <td v-on:click="deleteContract(item.id)">Delete</td>
+                </tr>
+            </table>
+
+            <div class="modal-background" v-show="isEditingContract">
+                <div class="fully-centered-div">
+                    <div id='edit-contract'>
+                        <label for="contract-user">Person:</label>
+                        <input id="contract-user" type="search" list="user-list" v-model="contract.user_id">
+                        <datalist id="user-list">
+                          <option v-bind:value="item.id" v-for="(item, index) in teachers_without_contract" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
+                        </datalist>
+
+
+                        <label for="contract-signing-date">Signing date:</label>
+                        <input name="contract-signing-date" id="contract-signing-date" v-model="contract.signing_date" type="date"/>
+                        <br>
+                        <label for="contract-valid-from">Valid from:</label>
+                        <input name="contract-valid-from" id="contract-valid-from" v-model="contract.valid_from" type="date"/>
+                        <br>
+                        <label for="contract-valid-till">Valid till:</label>
+                        <input name="contract-valid-till" id="contract-valid-till" v-model="contract.valid_till" type="date"/>
+                        <br>
+                        <label for="contract-template-select">Template:</label>
+                        <select name="contract-template-select" id="contract-template-select" v-model="contract.template_id">
+                              <option v-bind:value="item.id" v-for="(item, index) in contract_templates" v-bind:key="item.id">{{ item.name }}</option>
+                        </select>
+
+                        <br>
+                        <label for="contract-points-required">Points required:</label>
+                        <input id="contract-points-required" required v-model="contract.required_points">
+
+                        <button v-on:click="saveContract">Save</button>
+                        <button v-on:click="cancelContract">Cancel</button>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header">Signatures</div>
+            <table>
+                <tr>
+                    <th>Report period</th>
+                    <th>Contract</th>
+                    <th>Signed by teacher</th>
+                    <th>Signed by head of cathedra</th>
+                    <th>Signed by inspectors</th>
+                    <th>Signed by head of human resources</th>
+                    <th></th>
+                </tr>
+                <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
+                    <td v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
+                    <td>{{ item.contract_name }}</td>
+                    <td>{{ item.signed_by_teacher }}</td>
+                    <td>{{ item.signed_by_head_of_cathedra }}</td>
+                    <td>{{ item.signed_by_inspectors }}</td>
+                    <td>{{ item.signed_by_head_of_human_resources }}</td>
+                    <td v-on:click="signReport(item.id)">Sign</td>
+                </tr>
+            </table>
+
+
+            <div class="modal-background" v-show="isEditingReportParameters">
+                <div class="fully-centered-div" id='reported-parameters-div'>
+                    <table id="reported-parameters-list">
+                        <tr>
+                            <th>Parameter name</th>
+                            <th>Done</th>
+                            <th>Confirmation</th>
+                            <th>Inspectors comment</th>
+                            <th>Signed by inspector</th>
+                        </tr>
+                        <tr class="reported-parameter-item" v-for="(item, index) in reported_parameters" v-bind:id="item.id" v-bind:key="item.id">
+                            <td>{{ item.parameter_name }}</td>
+                            <td><input v-model="item.done"></td>
+                            <td><input v-model="item.confirmation_text">
+                                <input v-bind:id="'upload-file-' + index"
+                                  type="file"
+                                  @change="onFileChanged(item, $event)"
+                                  capture
+                                />
+                                <label v-if="item.confirmation_file" v-on:click="downloadFile(item)">{{ item.confirmation_file.file_name }}</label>
+                            </td>
+                            <td>{{ item.inspector_comment }}</td>
+                            <td>{{ item.signed_by_inspector }}</td>
+                        </tr>
+                    </table>
+                    <button v-on:click="cancelReportedParameter">Cancel</button>
+                </div>
+            </div>
 
         </div>
     `,

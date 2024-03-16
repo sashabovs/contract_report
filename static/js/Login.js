@@ -7,7 +7,7 @@ export default {
     },
     data() {
         return {
-            loginVal: "melnik",
+            loginVal: "muxina",
             passwordVal: "123",
         };
     },
@@ -19,8 +19,6 @@ export default {
             .then((res) => {
                 Token.token = res.data.token
                 var token_data = Token.getTokenData()
-//                var tokens = Token.token.split(".");
-//                var token_data = JSON.parse(atob(tokens[1]));
 
                 if(token_data.role === 'administrator'){
                     this.$router.push('/admin');
@@ -40,11 +38,11 @@ export default {
         }
     },
     template: `
-        <div>
+        <div class="fully-centered-div">
             <label for="login">Login:</label>
             <input id="login" required v-model="loginVal">
             <label for="password">Password:</label>
-            <input id="password" required v-model="passwordVal">
+            <input id="password" type="password" required v-model="passwordVal">
             <button v-on:click="login">Login</button>
         </div>
     `,
