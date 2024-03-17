@@ -22,6 +22,10 @@ class Role(Enum):
     TEACHER = "teacher"
     HEAD_OF_CATHEDRA = "head_of_cathedra"
 
+class ReportTypes(Enum):
+    EXECUTION_PROGRESS = "execution_progress"
+    SIGNING_PROGRESS = "signing_progress"
+
 
 def get_reader_connection_string():
     return "host=localhost port=5432 dbname=contract_report user=contract_report_reader password=123"

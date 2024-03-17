@@ -5,10 +5,25 @@
         <link rel="stylesheet" href="css/login.css" />
         <link rel="stylesheet" href="css/teacher.css" />
 
+        <link rel="stylesheet" href="https://unpkg.com/primevue/resources/themes/lara-light-green/theme.css" />
+        <link rel="stylesheet" href="https://unpkg.com/primeflex@latest/primeflex.css">
+        <link href="https://unpkg.com/primevue/resources/primevue.min.css" rel="stylesheet">
+        <link href="https://unpkg.com/primeicons/primeicons.css" rel="stylesheet">
+
         <script src="https://unpkg.com/vue@3"></script>
         <script src="https://unpkg.com/vue-router@4"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+        <script src="https://unpkg.com/primevue/core/core.min.js"></script>
+        <script src="https://unpkg.com/primevue/checkbox/checkbox.min.js"></script>
+        <script src="https://unpkg.com/primevue/checkbox/style/checkboxstyle.min.js"></script>
+        <script src="https://unpkg.com/primevue/dropdown/dropdown.min.js"></script>
+        <script src="https://unpkg.com/primevue/dropdown/style/dropdownstyle.min.js"></script>
+        <script src="https://unpkg.com/primevue/inputtext/inputtext.min.js"></script>
+        <script src="https://unpkg.com/primevue/inputtext/style/inputtextstyle.min.js"></script>
+        <script src="https://unpkg.com/primevue/button/button.min.js"></script>
+        <script src="https://unpkg.com/primevue/button/style/buttonstyle.min.js"></script>
 
 
 <!--        <script type="module" src="js/main.js"></script>-->
@@ -45,10 +60,18 @@
               routes: routes,
             })
 
+            app = Vue.createApp(App);
 
-            app=Vue.createApp(App);
-            app.use(router).mount("#app");
-            app.config.globalProperties.token = '';
+            app.component('p-dropdown', primevue.dropdown);
+            app.component('p-datepicker', primevue.calendar);
+            app.component('p-checkbox', primevue.checkbox);
+            app.component('p-inputtext', primevue.inputtext);
+            app.component('p-button', primevue.button);
+
+            app.use(router).use(primevue.config.default);
+
+
+            app.mount("#app");
         </script>
     </body>
 </html>

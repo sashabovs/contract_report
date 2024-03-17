@@ -1,11 +1,11 @@
 
 import Token from './Token.js'
 
-
 export default {
     components: {
     },
     data() {
+        const date = Vue.ref();
         return {
             loginVal: "muxina",
             passwordVal: "123",
@@ -40,9 +40,9 @@ export default {
     template: `
         <div class="fully-centered-div">
             <label for="login">Login:</label>
-            <input id="login" required v-model="loginVal">
+            <input id="login" required v-model="loginVal" />
             <label for="password">Password:</label>
-            <input id="password" type="password" required v-model="passwordVal">
+            <input id="password" type="password" required v-model="passwordVal" />
             <button v-on:click="login">Login</button>
         </div>
     `,
