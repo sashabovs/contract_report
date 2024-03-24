@@ -9,7 +9,7 @@ export default {
             isEditingReport: false,
             isEditingReportParameters: false,
             reports: [],
-            report: {"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false},
+            report: {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false},
 
             reported_parameters: [],
 
@@ -77,14 +77,14 @@ export default {
         },
         onAddReportClick(){
             this.isEditingReport = true;
-            this.report = {"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+            this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
         },
 
 
         editReport(report){
             this.isEditingReport = true;
             this.report = {"id":report.id, "period_of_report": report.period_of_report,
-            "contract_id": report.contract_id, "signed_by_teacher":report.signed_by_teacher,
+            "contract": report.contract, "signed_by_teacher":report.signed_by_teacher,
             "signed_by_head_of_cathedra":report.signed_by_head_of_cathedra,
             "signed_by_head_of_human_resources":report.signed_by_head_of_human_resources};
         },
@@ -117,7 +117,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingReport = false;
-                    this.report = {"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+                    this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
                     this.getReports();
                 })
                 .catch((error) => {
@@ -131,7 +131,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingReport = false;
-                    this.report = {"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+                    this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
                     this.getReports();
                 })
                 .catch((error) => {
@@ -143,7 +143,7 @@ export default {
         },
         cancelReport() {
             this.isEditingReport = false;
-            this.report = {"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+            this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
             this.getReports();
         },
         signReport(report_id) {
@@ -293,10 +293,24 @@ export default {
 
                     <br>
                     <label for="report-contract">Contract:</label>
-                    <input id="report-contract" type="search" list="contracts-list" v-model="report.contract_id">
-                    <datalist id="contracts-list">
-                      <option v-bind:value="item.id" v-for="(item, index) in contracts" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-                    </datalist>
+
+
+                    <p-dropdown v-model="report.contract" v-bind:options="contracts" filter optionLabel="name" placeholder="Select a Contract" class="w-full md:w-14rem">
+                        <template #value="slotProps">
+                            <div v-if="slotProps.value" class="flex align-items-center">
+                                <div>{{ slotProps.value.name }}</div>
+                            </div>
+                            <span v-else>
+                                {{ slotProps.placeholder }}
+                            </span>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex align-items-center">
+                                <div>{{ slotProps.option.name }}</div>
+                            </div>
+                        </template>
+                    </p-dropdown>
+
 
 
                     <button v-on:click="saveReport">Save</button>

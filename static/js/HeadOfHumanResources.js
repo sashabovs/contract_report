@@ -14,17 +14,17 @@ export default {
             parameters: [],
             units: [],
             inspectors: [],
-            parameter: {},
+            parameter: {"inspector":{}},
             isEditingParameter: false,
 
             parameters_in_template: [],
             isEditingParameterInTemplate: false,
             inspection_periods:[],
-            parameter_in_template: {},
+            parameter_in_template: {"parameter":{}},
             selected_template: -1,
 
             contracts: [],
-            contract: {},
+            contract: {"user":{}},
             teachers_without_contract: [],
             isEditingContract: false,
 
@@ -37,7 +37,7 @@ export default {
     methods: {
         selectContractTemplate(contract_template_id) {
             this.selected_template = contract_template_id;
-            this.parameter_in_template={};
+            this.parameter_in_template={"parameter":{}};
             this.isEditingParameterInTemplate = false;
             this.getParametersInTemplate(contract_template_id);
         },
@@ -134,12 +134,12 @@ export default {
         },
         addParameter(){
             this.isEditingParameter = true;
-            this.parameter = {};
+            this.parameter = {"inspector":{}};
         },
 
         editParameter(parameter){
             this.isEditingParameter = true;
-            this.parameter = {"id":parameter.id, "name": parameter.name, "unit_id": parameter.unit_id, "inspector_id":parameter.inspector_id};
+            this.parameter = {"id":parameter.id, "name": parameter.name, "unit_id": parameter.unit_id, "inspector":parameter.inspector};
         },
         deleteParameter(parameter_id){
             if (!confirm('Do you want to delete parameter?')){
@@ -168,7 +168,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingParameter = false;
-                    this.parameter = {};
+                    this.parameter = {"inspector":{}};
                     this.getParameters();
                 })
                 .catch((error) => {
@@ -182,7 +182,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingParameter = false;
-                    this.parameter = {};
+                    this.parameter = {"inspector":{}};
                     this.getParameters();
                 })
                 .catch((error) => {
@@ -194,7 +194,7 @@ export default {
         },
         cancelParameter() {
             this.isEditingParameter = false;
-            this.parameter = {};
+            this.parameter = {"inspector":{}};
             this.getParameters();
         },
         getParametersInTemplate(contract_template_id) {
@@ -216,14 +216,14 @@ export default {
                 return;
             }
             this.isEditingParameterInTemplate = true;
-            this.parameter_in_template = {};
+            this.parameter_in_template = {"parameter":{}};
             this.parameter_in_template.template_id = this.selected_template;
         },
 
 
         editParameterToTemplate(parameter_in_template){
             this.isEditingParameterInTemplate = true;
-            this.parameter_in_template = {"id":parameter_in_template.id, "template_id": this.selected_template, "parameter_id": parameter_in_template.parameter_id,
+            this.parameter_in_template = {"id":parameter_in_template.id, "template_id": this.selected_template, "parameter": parameter_in_template.parameter,
             "needs_inspection": parameter_in_template.needs_inspection, "inspection_period_id":parameter_in_template.inspection_period_id,
             "requirement":parameter_in_template.requirement, "points_promised":parameter_in_template.points_promised};
         },
@@ -254,7 +254,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingParameterInTemplate = false;
-                    this.parameter_in_template = {};
+                    this.parameter_in_template = {"parameter":{}};
                     this.getParametersInTemplate(this.selected_template);
                 })
                 .catch((error) => {
@@ -268,7 +268,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingParameterInTemplate = false;
-                    this.parameter_in_template = {};
+                    this.parameter_in_template = {"parameter":{}};
                     this.getParametersInTemplate(this.selected_template);
                 })
                 .catch((error) => {
@@ -280,7 +280,7 @@ export default {
         },
         cancelParameterToTemplate() {
             this.isEditingParameterInTemplate = false;
-            this.parameter_in_template = {};
+            this.parameter_in_template = {"parameter":{}};
             this.getParametersInTemplate(this.selected_template);
         },
 
@@ -300,13 +300,13 @@ export default {
         },
         addContract(){
             this.isEditingContract = true;
-            this.contract = {};
+            this.contract = {"user":{}};
         },
 
 
         editContract(contract){
             this.isEditingContract = true;
-            this.contract = {"id":contract.id, "user_id": contract.user_id,
+            this.contract = {"id":contract.id, "user": contract.user,
             "signing_date": contract.signing_date, "valid_from":contract.valid_from,
             "valid_till":contract.valid_till, "template_id":contract.template_id, "required_points":contract.required_points};
         },
@@ -339,7 +339,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingContract = false;
-                    this.contract = {};
+                    this.contract = {"user":{}};
                     this.getContracts();
                 })
                 .catch((error) => {
@@ -353,7 +353,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingContract = false;
-                    this.contract = {};
+                    this.contract = {"user":{}};
                     this.getContracts();
                 })
                 .catch((error) => {
@@ -365,7 +365,7 @@ export default {
         },
         cancelContract() {
             this.isEditingContract = false;
-            this.contract = {};
+            this.contract = {"user":{}};
             this.getContracts();
         },
         getTeachersWithoutContract(){
@@ -539,7 +539,7 @@ export default {
                 <tr class="parameter-item" v-for="(item, index) in parameters" v-bind:id="item.id" v-bind:key="item.id">
                     <td>{{ item.name }}</td>
                     <td>{{ item.unit }}</td>
-                    <td>{{ item.inspector }}</td>
+                    <td>{{ item.inspector.full_name }}</td>
                     <td v-on:click="editParameter(item)">Edit</td>
                     <td v-on:click="deleteParameter(item.id)">Delete</td>
                 </tr>
@@ -560,10 +560,22 @@ export default {
 
                         <br>
                         <label for="parameter-inspectors">Inspector:</label>
-                        <input id="parameter-inspectors" type="search" list="parameter-inspectors-list" v-model="parameter.inspector_id">
-                        <datalist id="parameter-inspectors-list">
-                          <option v-bind:value="item.id" v-for="(item, index) in inspectors" v-bind:key="item.id">{{ item.full_name }} ({{ item.id }})</option>
-                        </datalist>
+
+                        <p-dropdown v-model="parameter.inspector" v-bind:options="inspectors" filter optionLabel="full_name" placeholder="Select an Inspector" class="w-full md:w-14rem">
+                            <template #value="slotProps">
+                                <div v-if="slotProps.value" class="flex align-items-center">
+                                    <div>{{ slotProps.value.full_name }}</div>
+                                </div>
+                                <span v-else>
+                                    {{ slotProps.placeholder }}
+                                </span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex align-items-center">
+                                    <div>{{ slotProps.option.full_name }}</div>
+                                </div>
+                            </template>
+                        </p-dropdown>
 
                         <button v-on:click="saveParameter">Save</button>
                         <button v-on:click="cancelParameter">Cancel</button>
@@ -612,7 +624,7 @@ export default {
                     <th></th>
                 </tr>
                 <tr class="parameters-in-template-item" v-for="(item, index) in parameters_in_template" v-bind:id="item.id" v-bind:key="item.id">
-                    <td>{{ item.parameter_name }}</td>
+                    <td>{{ item.parameter.name }}</td>
                     <td>{{ item.needs_inspection }}</td>
                     <td>{{ item.inspection_period_name }}</td>
                     <td>{{ item.requirement }}</td>
@@ -627,10 +639,25 @@ export default {
                 <div class="fully-centered-div">
                     <div id='edit-parameter-in-template'>
                         <label for="parameter-in-template-parameters">Parameter:</label>
-                        <input id="parameter-in-template-parameters" type="search" list="parameter-in-template-list" v-model="parameter_in_template.parameter_id">
-                        <datalist id="parameter-in-template-list">
-                          <option v-bind:value="item.id" v-for="(item, index) in parameters" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-                        </datalist>
+
+
+                        <p-dropdown v-model="parameter_in_template.parameter" v-bind:options="parameters" filter optionLabel="name" placeholder="Select a Parameter" class="w-full md:w-14rem">
+                            <template #value="slotProps">
+                                <div v-if="slotProps.value" class="flex align-items-center">
+                                    <div>{{ slotProps.value.name }}</div>
+                                </div>
+                                <span v-else>
+                                    {{ slotProps.placeholder }}
+                                </span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex align-items-center">
+                                    <div>{{ slotProps.option.name }}</div>
+                                </div>
+                            </template>
+                        </p-dropdown>
+
+
 
 
                         <label for="parameter-needs-inspection">Needs inspection:</label>
@@ -669,7 +696,7 @@ export default {
                     <th></th>
                 </tr>
                 <tr class="contract-item" v-for="(item, index) in contracts" v-bind:id="item.id" v-bind:key="item.id">
-                    <td>{{ item.user_name }}</td>
+                    <td>{{ item.user.full_name }}</td>
                     <td>{{ item.signing_date }}</td>
                     <td>{{ item.valid_from }}-{{ item.valid_till }}</td>
                     <td>{{ item.template_name }}</td>
@@ -683,10 +710,23 @@ export default {
                 <div class="fully-centered-div">
                     <div id='edit-contract'>
                         <label for="contract-user">Person:</label>
-                        <input id="contract-user" type="search" list="user-list" v-model="contract.user_id">
-                        <datalist id="user-list">
-                          <option v-bind:value="item.id" v-for="(item, index) in teachers_without_contract" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-                        </datalist>
+
+                        <p-dropdown v-model="contract.user" v-bind:options="teachers_without_contract" filter optionLabel="full_name" placeholder="Select a Teacher" class="w-full md:w-14rem">
+                            <template #value="slotProps">
+                                <div v-if="slotProps.value" class="flex align-items-center">
+                                    <div>{{ slotProps.value.full_name }}</div>
+                                </div>
+                                <span v-else>
+                                    {{ slotProps.placeholder }}
+                                </span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex align-items-center">
+                                    <div>{{ slotProps.option.full_name }}</div>
+                                </div>
+                            </template>
+                        </p-dropdown>
+
 
 
                         <label for="contract-signing-date">Signing date:</label>

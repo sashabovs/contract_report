@@ -47,6 +47,7 @@ def get_reports():
                 model.Reports.period_of_report,
                 model.Reports.contract_id,
                 model.Contracts.user_id,
+                model.Users.full_name,
                 model.Contracts.valid_from,
                 model.Contracts.valid_till,
                 model.Reports.signed_by_teacher,
@@ -98,14 +99,14 @@ def get_reports():
                 {
                     "id": row[0],
                     "period_of_report": str(row[1]),
-                    "contract_id": row[2],
+                    "contract": {"id":row[2],"name":row[4]+'('+ str(row[5])+ '-' + str(row[6]) +')'},
                     "user_id": row[3],
-                    "valid_from": str(row[4]),
-                    "valid_till": str(row[5]),
-                    "signed_by_teacher": row[6],
+                    "valid_from": str(row[5]),
+                    "valid_till": str(row[6]),
+                    "signed_by_teacher": row[7],
                     "signed_by_inspector": signed_by_inspector_dict.get(row[0], False),
-                    "signed_by_head_of_cathedra": row[7],
-                    "signed_by_head_of_human_resources": row[8],
+                    "signed_by_head_of_cathedra": row[8],
+                    "signed_by_head_of_human_resources": row[9],
                 }
                 for row in rows
             ]
@@ -263,7 +264,7 @@ def save_report():
     error = ""
     if not data.get("period_of_report"):
         error += "Empty period_of_report. "
-    if not data.get("contract_id"):
+    if not data.get("contract") or not data["contract"].get("id"):
         error += "Empty contract_id. "
     if data.get("signed_by_teacher") is None:
         error += "Empty signed_by_teacher. "
@@ -277,10 +278,10 @@ def save_report():
             error,
             status=400,
         )
-    data["contract_id"] = int(data["contract_id"])
+    # data["contract_id"] = int(data["contract_id"])
     reports = model.Reports(
         period_of_report=data["period_of_report"],
-        contract_id=data["contract_id"],
+        contract_id=data["contract"]["id"],
         signed_by_teacher=data["signed_by_teacher"],
         signed_by_head_of_cathedra=data["signed_by_head_of_cathedra"],
         signed_by_head_of_human_resources=data["signed_by_head_of_human_resources"],
@@ -294,7 +295,7 @@ def save_report():
             onclause=model.Contracts.template_id
             == model.ParametersTemplates.template_id,
         )
-        .where(model.Contracts.id == data["contract_id"])
+        .where(model.Contracts.id == data["contract"]["id"])
     )
     contract_parameters = session.execute(stmt).all()
 
@@ -340,7 +341,7 @@ def edit_report(id):
     error = ""
     if not data.get("period_of_report"):
         error += "Empty period_of_report. "
-    if not data.get("contract_id"):
+    if not data.get("contract") or not data["contract"].get("id"):
         error += "Empty contract_id. "
     if data.get("signed_by_teacher") is None:
         error += "Empty signed_by_teacher. "
@@ -359,7 +360,7 @@ def edit_report(id):
     session.query(model.Reports).filter(model.Reports.id == id).update(
         {
             model.Reports.period_of_report: data["period_of_report"],
-            model.Reports.contract_id: data["contract_id"],
+            model.Reports.contract_id: data["contract"]["id"],
             model.Reports.signed_by_teacher: data["signed_by_teacher"],
             model.Reports.signed_by_head_of_cathedra: data[
                 "signed_by_head_of_cathedra"

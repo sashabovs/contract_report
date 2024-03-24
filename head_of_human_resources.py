@@ -30,7 +30,9 @@ def get_units():
         )
 
     with db_utils.auto_session(db_utils.engine_reader) as session:
-        stmt = sqlalchemy.select(model.ParameterUnits).order_by(model.ParameterUnits.name)
+        stmt = sqlalchemy.select(model.ParameterUnits).order_by(
+            model.ParameterUnits.name
+        )
         rows = session.execute(stmt).all()
 
         mapping = [row._mapping["ParameterUnits"] for row in rows]
@@ -253,9 +255,12 @@ def get_parameters():
                     "id": row.id,
                     "name": row.name,
                     "unit_id": row.unit_id,
-                    "inspector_id": row.inspector_id,
+                    # "inspector_id": row.inspector_id,
                     "unit": row.unit.name,
-                    "inspector": row.inspector.full_name,
+                    "inspector": {
+                        "id": row.inspector_id,
+                        "full_name": row.inspector.full_name,
+                    },
                 }
                 for row in mapping
             ]
@@ -286,7 +291,7 @@ def edit_parameters(id):
         error += "Empty name. "
     if not data.get("unit_id"):
         error += "Empty units. "
-    if not data.get("inspector_id"):
+    if not data.get("inspector") or not data["inspector"].get("id"):
         error += "Empty inspector. "
     if error:
         return flask.Response(
@@ -300,7 +305,7 @@ def edit_parameters(id):
         {
             model.Parameters.name: data["name"],
             model.Parameters.unit_id: data["unit_id"],
-            model.Parameters.inspector_id: data["inspector_id"],
+            model.Parameters.inspector_id: data["inspector"]["id"],
         }
     )
     session.commit()
@@ -356,7 +361,7 @@ def save_parameter():
         error += "Empty name. "
     if not data.get("unit_id"):
         error += "Empty units. "
-    if not data.get("inspector_id"):
+    if not data.get("inspector") or not data["inspector"].get("id"):
         error += "Empty inspector. "
 
     if error:
@@ -366,7 +371,7 @@ def save_parameter():
         )
 
     parameter = model.Parameters(
-        name=data["name"], unit_id=data["unit_id"], inspector_id=data["inspector_id"]
+        name=data["name"], unit_id=data["unit_id"], inspector_id=data["inspector"]["id"]
     )
     session = sqlalchemy.orm.Session(db_utils.engine_writer)
     session.add(parameter)
@@ -442,13 +447,13 @@ def get_parameters_in_template(id):
                 {
                     "id": row.id,
                     "template_id": row.template_id,
-                    "parameter_id": row.parameter_id,
+                    "parameter": {"id":row.parameter_id, "name":row.parameter.name},
                     "needs_inspection": row.needs_inspection,
                     "inspection_period_id": row.inspection_period_id,
                     "requirement": row.requirement,
                     "points_promised": row.points_promised,
                     "template_name": row.template.name,
-                    "parameter_name": row.parameter.name,
+                    # "parameter_name": row.parameter.name,
                     "inspection_period_name": row.inspection_period.name,
                 }
                 for row in mapping
@@ -477,7 +482,7 @@ def edit_parameter_in_template(id):
     data = flask.request.get_json()
     error = ""
 
-    if not data.get("parameter_id"):
+    if not data.get("parameter") or not data["parameter"].get("id"):
         error += "Empty parameter. "
     if data.get("needs_inspection") is None:
         error += "Empty need_inspection. "
@@ -499,7 +504,7 @@ def edit_parameter_in_template(id):
         model.ParametersTemplates.id == id
     ).update(
         {
-            model.ParametersTemplates.parameter_id: data["parameter_id"],
+            model.ParametersTemplates.parameter_id: data["parameter"]["id"],
             model.ParametersTemplates.needs_inspection: data["needs_inspection"],
             model.ParametersTemplates.inspection_period_id: data[
                 "inspection_period_id"
@@ -563,7 +568,7 @@ def save_parameter_in_template():
     error = ""
     if not data.get("template_id"):
         error += "Empty template. "
-    if not data.get("parameter_id"):
+    if not data.get("parameter") or not data["parameter"].get("id"):
         error += "Empty parameter. "
     if not data.get("inspection_period_id"):
         error += "Empty inspection period. "
@@ -582,7 +587,7 @@ def save_parameter_in_template():
 
     parameter = model.ParametersTemplates(
         template_id=data["template_id"],
-        parameter_id=data["parameter_id"],
+        parameter_id=data["parameter"]["id"],
         inspection_period_id=data["inspection_period_id"],
         needs_inspection=data["needs_inspection"],
         requirement=data["requirement"],
@@ -629,7 +634,7 @@ def get_teachers_without_contract():
             [
                 {
                     "id": row.id,
-                    "name": row.full_name,
+                    "full_name": row.full_name,
                 }
                 for row in mapping
             ]
@@ -672,13 +677,14 @@ def get_contracts():
             [
                 {
                     "id": row.id,
-                    "user_id": row.user_id,
+                    "name": row.user.full_name +'('+ str(row.valid_from)+ '-' + str(row.valid_till) +')',
+                    "user": {"id":row.user_id,"full_name":row.user.full_name},
                     "signing_date": str(row.signing_date),
                     "valid_from": str(row.valid_from),
                     "valid_till": str(row.valid_till),
                     "template_id": row.template_id,
                     "required_points": row.required_points,
-                    "user_name": row.user.full_name,
+                    # "user_name": row.user.full_name,
                     "template_name": row.template.name,
                 }
                 for row in mapping
@@ -707,7 +713,7 @@ def edit_contracts(id):
     data = flask.request.get_json()
     error = ""
 
-    if not data.get("user_id"):
+    if not data.get("user") or not data["user"].get("id"):
         error += "Empty user. "
     if not data.get("signing_date"):
         error += "Empty signing_date. "
@@ -729,7 +735,7 @@ def edit_contracts(id):
     # contract_templates = model.ContractTemplates(id=id, name=data["name"])
     session.query(model.Contracts).filter(model.Contracts.id == id).update(
         {
-            model.Contracts.user_id: data["user_id"],
+            model.Contracts.user_id: data["user"]["id"],
             model.Contracts.signing_date: data["signing_date"],
             model.Contracts.valid_from: data["valid_from"],
             model.Contracts.valid_till: data["valid_till"],
@@ -786,7 +792,7 @@ def save_contract():
 
     data = flask.request.get_json()
     error = ""
-    if not data.get("user_id"):
+    if not data.get("user") or not data["user"].get("id"):
         error += "Empty user. "
     if not data.get("signing_date"):
         error += "Empty signing_date. "
@@ -806,7 +812,7 @@ def save_contract():
         )
 
     contract = model.Contracts(
-        user_id=data["user_id"],
+        user_id=data["user"]["id"],
         signing_date=data["signing_date"],
         valid_from=data["valid_from"],
         valid_till=data["valid_till"],

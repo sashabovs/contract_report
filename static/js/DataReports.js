@@ -9,7 +9,7 @@ export default {
         return {
             report_html_body: "",
             faculties: [],
-            selectedFaculty: null,
+
 
             cathedras: [],
             teachers:[],
@@ -74,10 +74,13 @@ export default {
             })
         },
         getTeachers(){
+            if (!this.filter.cathedra || !this.filter.faculty) {
+                return
+            }
             axios.get('/users', {
                 params:{
-                        faculty_id: this.filter.faculty_id,
-                        cathedra_id : this.filter.cathedra_id,
+                        faculty_id: this.filter.faculty.id,
+                        cathedra_id : this.filter.cathedra.id,
                 },
                 headers: {
                     'Token': Token.token,
@@ -97,12 +100,12 @@ export default {
     },
     template: `
         <div class="centered-div">
-            <table>
+            <table id="data-reports-main-table">
                 <tr>
                     <td>
                         <ul>
-                            <li v-on:click="selectExecutionReport">execution progress</li>
-                            <li v-on:click="selectSigningReport">signing progress</li>
+                            <li v-on:click="selectExecutionReport" v-bind:class="'execution_progress' == selected_id ? 'selected-row':''">execution progress</li>
+                            <li v-on:click="selectSigningReport" v-bind:class="'signing_progress' == selected_id ? 'selected-row':''">signing progress</li>
                         </ul>
                     </td>
                     <td>
@@ -131,17 +134,42 @@ export default {
                             </p-dropdown>
 
                             <label for="cathedras">Cathedra:</label>
-                            <input id="cathedras" type="search" list="cathedras-list" @change="getTeachers" v-model="filter.cathedra_id">
-                            <datalist id="cathedras-list">
-                              <option v-bind:value="item.id" v-for="(item, index) in cathedras" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-                            </datalist>
+
+                            <p-dropdown v-model="filter.cathedra" v-bind:options="cathedras" filter optionLabel="name" placeholder="Select a Cathedra" class="w-full md:w-14rem" v-on:change="getTeachers">
+                                <template #value="slotProps">
+                                    <div v-if="slotProps.value" class="flex align-items-center">
+                                        <div>{{ slotProps.value.name }}</div>
+                                    </div>
+                                    <span v-else>
+                                        {{ slotProps.placeholder }}
+                                    </span>
+                                </template>
+                                <template #option="slotProps">
+                                    <div class="flex align-items-center">
+                                        <div>{{ slotProps.option.name }}</div>
+                                    </div>
+                                </template>
+                            </p-dropdown>
+
 
                             <label for="user">User:</label>
-                            <input id="user" type="search" list="users-list" v-model="filter.user_id">
-                            <datalist id="users-list">
 
-                              <option v-bind:value="item.id" v-for="(item, index) in teachers" v-bind:key="item.id">{{ item.name }} ({{ item.id }})</option>
-                            </datalist>
+                            <p-dropdown v-model="filter.user" v-bind:options="teachers" filter optionLabel="full_name" placeholder="Select a User" class="w-full md:w-14rem">
+                                <template #value="slotProps">
+                                    <div v-if="slotProps.value" class="flex align-items-center">
+                                        <div>{{ slotProps.value.full_name }}</div>
+                                    </div>
+                                    <span v-else>
+                                        {{ slotProps.placeholder }}
+                                    </span>
+                                </template>
+                                <template #option="slotProps">
+                                    <div class="flex align-items-center">
+                                        <div>{{ slotProps.option.full_name }}</div>
+                                    </div>
+                                </template>
+                            </p-dropdown>
+
 
                             <label for="extended-view">Extended view:</label>
                             <input id="extended-view" type="checkbox" v-model="filter.extended">

@@ -64,3 +64,7 @@ table td, table th{
 .section-header {
     margin: 10px 0;
 }
+
+.p-inputtext{
+    padding: 0.2rem 0.5rem;
+}

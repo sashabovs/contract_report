@@ -113,15 +113,15 @@ def get_reports(id):
                 )
             )
 
-            if data.get("user_id"):
-                contracts_tmp = contracts_tmp.filter(model.Users.id == data["user_id"])
-            elif data.get("cathedra_id"):
+            if data.get("user"):
+                contracts_tmp = contracts_tmp.filter(model.Users.id == data["user_id"]["id"])
+            elif data.get("cathedra"):
                 contracts_tmp = contracts_tmp.filter(
-                    model.Users.cathedra_id == int(data["cathedra_id"])
+                    model.Users.cathedra_id == int(data["cathedra"]["id"])
                 )
-            elif data.get("faculty_id"):
+            elif data.get("faculty"):
                 contracts_tmp = contracts_tmp.filter(
-                    model.Cathedras.faculty_id == int(data["faculty_id"])
+                    model.Cathedras.faculty_id == int(data["faculty"]["id"])
                 )
 
             contracts_tmp = contracts_tmp.cte("contracts_tmp")
