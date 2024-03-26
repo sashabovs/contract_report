@@ -296,10 +296,10 @@ export default {
                 <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
                     <td class="button-label" v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
                     <td>{{ item.contract.name }}</td>
-                    <td>{{ item.signed_by_teacher }}</td>
-                    <td>{{ item.signed_by_head_of_cathedra }}</td>
-                    <td>{{ item.signed_by_inspector }}</td>
-                    <td>{{ item.signed_by_head_of_human_resources }}</td>
+                    <td><input type="checkbox" disabled v-model="item.signed_by_teacher"></td>
+                    <td><input type="checkbox" disabled v-model="item.signed_by_head_of_cathedra"></td>
+                    <td><input type="checkbox" disabled v-model="item.signed_by_inspector"></td>
+                    <td><input type="checkbox" disabled v-model="item.signed_by_head_of_human_resources"></td>
                     <td class="button-label" v-on:click="editReport(item)">Edit</td>
                     <td class="button-label" v-on:click="deleteReport(item.id)">Delete</td>
                     <td class="button-label" v-on:click="signReport(item.id)">Sign</td>
