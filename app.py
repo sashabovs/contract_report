@@ -18,6 +18,7 @@ app.register_blueprint(admin_app)
 app.register_blueprint(reports_app)
 app.register_blueprint(data_reports_app)
 
+
 @app.route("/")
 def index():
     return app.send_static_file("index.html")
@@ -28,7 +29,7 @@ def login():
     data = request.get_json()
 
     with db_utils.auto_session(db_utils.engine_reader) as session:
-        stmt = sqlalchemy.select(model.Users).where(model.Users.login == data["login"])
+        stmt = sqlalchemy.select(model.Users,model.Cathedras.faculty_id).where(model.Users.login == data["login"])
         users = session.scalars(stmt).first()
 
         if not users:
@@ -45,7 +46,8 @@ def login():
 
         role = users.role
         user_id = users.id
-        cathedra_id=users.cathedra_id
+        cathedra_id = users.cathedra_id
+        faculty_id = users.cathedra.faculty_id if cathedra_id else None
 
         encoded = jwt.encode(
             {
@@ -53,6 +55,7 @@ def login():
                 "role": role,
                 "user_id": user_id,
                 "cathedra_id": cathedra_id,
+                "faculty_id": faculty_id,
             },
             token_utils.JWT_SECRET,
             algorithm="HS256",

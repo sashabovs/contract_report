@@ -32,6 +32,10 @@ export default {
             selected_report : -1,
             reported_parameters: [],
             reports: [],
+
+            period:{},
+            periods:[],
+            isEditingPeriod: false,
         };
     },
     methods: {
@@ -117,6 +121,84 @@ export default {
             .catch((error) => {
               console.log(error.response.data);
             })
+        },
+        getPeriods() {
+            axios.get('/periods', {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.periods = res.data;
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+        },
+        addPeriod(){
+            this.isEditingPeriod = true;
+            this.period = {};
+        },
+
+        editPeriod(period){
+            this.isEditingPeriod = true;
+            this.period = {"id":period.id, "period": period.period, "time_of_opening": period.time_of_opening, "time_of_closing":period.time_of_closing};
+        },
+        deletePeriod(period_id){
+            if (!confirm('Do you want to delete period?')){
+                return;
+            }
+            axios.delete('/periods/' + period_id, {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.getPeriods();
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+        },
+
+        savePeriod() {
+            let body = this.period;
+            if(this.period.id == null){
+                axios.post('/periods', body, {
+                    headers: {
+                        'Token': Token.token,
+                    }
+                })
+                .then((res) => {
+                    this.isEditingPeriod = false;
+                    this.period = {};
+                    this.getPeriods();
+                })
+                .catch((error) => {
+                  console.log(error.response.data);
+                })
+            }else{
+                axios.put('/periods/' + this.period.id, body, {
+                    headers: {
+                        'Token': Token.token,
+                    }
+                })
+                .then((res) => {
+                    this.isEditingPeriod = false;
+                    this.period = {};
+                    this.getPeriods();
+                })
+                .catch((error) => {
+                  console.log(error.response.data);
+                })
+            }
+
+
+        },
+        cancelPeriod() {
+            this.isEditingPeriod = false;
+            this.period = {};
+            this.getPeriods();
         },
 
         getParameters() {
@@ -485,6 +567,7 @@ export default {
         this.getContracts();
         this.getTeachersWithoutContract();
         this.getReports();
+        this.getPeriods();
 
         axios.get('/units', {
             headers: {
@@ -540,8 +623,8 @@ export default {
                     <td>{{ item.name }}</td>
                     <td>{{ item.unit }}</td>
                     <td>{{ item.inspector.full_name }}</td>
-                    <td v-on:click="editParameter(item)">Edit</td>
-                    <td v-on:click="deleteParameter(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="editParameter(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteParameter(item.id)">Delete</td>
                 </tr>
             </table>
 
@@ -584,6 +667,45 @@ export default {
                 </div>
             </div>
 
+
+            <div class="section-header">Opened periods</div>
+            <button id="add-period" v-on:click="addPeriod">Add period</button>
+            <table>
+                <tr>
+                    <th>Period</th>
+                    <th>Opens</th>
+                    <th>Closes</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr class="report-item" v-for="(item, index) in periods" v-bind:id="item.id" v-bind:key="item.id">
+                    <td >{{ item.period }}</td>
+                    <td>{{ item.time_of_opening }}</td>
+                    <td>{{ item.time_of_closing }}</td>
+                    <td class="button-label" v-on:click="editPeriod(item)">Edit</td>
+                    <td class="button-label" v-on:click="deletePeriod(item.id)">Delete</td>
+                </tr>
+            </table>
+
+
+            <div class="modal-background" v-show="isEditingPeriod">
+                <div class="fully-centered-div" id='reported-parameters-div'>
+                    <label for="period-date">Period:</label>
+                    <input name="period-date" id="period-date" v-model="period.period" type="date"/>
+
+                    <label for="opening-period-date">Opening:</label>
+                    <input name="opening-period-date" id="opening-period-date" v-model="period.time_of_opening" type="date"/>
+
+                    <label for="closing-period-date">Closing:</label>
+                    <input name="closing-period-date" id="closing-period-date" v-model="period.time_of_closing" type="date"/>
+
+                    <button v-on:click="savePeriod">Save</button>
+                    <button v-on:click="cancelPeriod">Cancel</button>
+                </div>
+            </div>
+
+
+
             <div class="section-header">Contract templates</div>
             <button id="add-contract-template" v-on:click="addTemplate">Add contract template</button>
             <table id="contract-templates-list">
@@ -594,8 +716,8 @@ export default {
                 </tr>
                 <tr class="contract-templates-item" v-bind:class="item.id == selected_template ? 'selected-row':''" v-for="(item, index) in contract_templates" v-bind:id="item.id" v-bind:key="item.id">
                     <td v-on:click="selectContractTemplate(item.id)">{{ item.name }}</td>
-                    <td v-on:click="editTemplate(item)">Edit</td>
-                    <td v-on:click="deleteContractTemplate(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="editTemplate(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteContractTemplate(item.id)">Delete</td>
                 </tr>
             </table>
 
@@ -629,8 +751,8 @@ export default {
                     <td>{{ item.inspection_period_name }}</td>
                     <td>{{ item.requirement }}</td>
                     <td>{{ item.points_promised }}</td>
-                    <td v-on:click="editParameterToTemplate(item)">Edit</td>
-                    <td v-on:click="deleteParameterToTemplate(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="editParameterToTemplate(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteParameterToTemplate(item.id)">Delete</td>
                 </tr>
             </table>
 
@@ -701,8 +823,8 @@ export default {
                     <td>{{ item.valid_from }}-{{ item.valid_till }}</td>
                     <td>{{ item.template_name }}</td>
                     <td>{{ item.required_points }}</td>
-                    <td v-on:click="editContract(item)">Edit</td>
-                    <td v-on:click="deleteContract(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="editContract(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteContract(item.id)">Delete</td>
                 </tr>
             </table>
 
@@ -767,12 +889,12 @@ export default {
                 </tr>
                 <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
                     <td v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
-                    <td>{{ item.contract_name }}</td>
+                    <td>{{ item.contract.name }}</td>
                     <td>{{ item.signed_by_teacher }}</td>
                     <td>{{ item.signed_by_head_of_cathedra }}</td>
-                    <td>{{ item.signed_by_inspectors }}</td>
+                    <td>{{ item.signed_by_inspector }}</td>
                     <td>{{ item.signed_by_head_of_human_resources }}</td>
-                    <td v-on:click="signReport(item.id)">Sign</td>
+                    <td class="button-label" v-on:click="signReport(item.id)">Sign</td>
                 </tr>
             </table>
 

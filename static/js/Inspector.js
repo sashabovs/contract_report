@@ -9,6 +9,9 @@ export default {
 
             reported_parameters: [],
             user_id : -1,
+            isEditingInspectorsComment: false,
+            inspector_comment: "",
+            reported_parameter_id: -1,
         };
     },
     methods: {
@@ -133,6 +136,31 @@ export default {
 
         onFileChanged(item, event) {
 
+        },
+        onAddCommentClick(reported_parameter_id, comment){
+            this.isEditingInspectorsComment = true;
+            this.reported_parameter_id = reported_parameter_id;
+            this.inspector_comment = comment;
+        },
+        saveComment(){
+            this.isEditingInspectorsComment = false;
+            let body = {"inspector_comment":this.inspector_comment};
+            axios.post('/reported-parameter/' + this.reported_parameter_id + '/save-comment',body, {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.getReportedParameters();
+                this.inspector_comment = "";
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
+        },
+        cancelComment(){
+            this.isEditingInspectorsComment = false;
+            this.inspector_comment = "";
         }
     },
     mounted() {
@@ -155,10 +183,10 @@ export default {
                     <th></th>
                 </tr>
                 <tr class="reported-parameter-item" v-for="(item, index) in reported_parameters" v-bind:id="item.id" v-bind:key="item.id">
-                    <td>{{ item.user_name }}</td>
+                    <td>{{ item.full_name }}</td>
                     <td>{{ item.parameter_name }}</td>
-                    <td><input v-model="item.done"></td>
-                    <td><input v-model="item.confirmation_text">
+                    <td>{{ item.done }}</td>
+                    <td><input v-model="item.confirmation_text" readonly>
                         <input v-bind:id="'upload-file-' + index"
                           type="file"
                           @change="onFileChanged(item, $event)"
@@ -166,11 +194,22 @@ export default {
                         />
                         <label v-if="item.confirmation_file" v-on:click="downloadFile(item)">{{ item.confirmation_file.file_name }}</label>
                     </td>
-                    <td>{{ item.inspector_comment }}</td>
-                    <td v-on:click="acceptReportedParameter(item.id)">Accept</td>
-                    <td v-on:click="denyReportedParameter(item.report_id)">Deny</td>
+                    <td>{{ item.inspector_comment }}<button v-on:click="onAddCommentClick(item.id, item.inspector_comment)">Change comment</button></td>
+                    <td class="button-label" v-on:click="acceptReportedParameter(item.id)">Accept</td>
+                    <td class="button-label" v-on:click="denyReportedParameter(item.report_id)">Deny</td>
                 </tr>
             </table>
+
+
+
+            <div class="modal-background" v-show="isEditingInspectorsComment">
+                <div class="fully-centered-div" id='reported-parameters-div'>
+                    <input v-model="inspector_comment">
+                    <br>
+                    <button v-on:click="saveComment">Save comment</button>
+                    <button v-on:click="cancelComment">Cancel</button>
+                </div>
+            </div>
 
         </div>
     `,

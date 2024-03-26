@@ -142,6 +142,9 @@ export default {
 
         onFileChanged(item, event) {
 
+        },
+        goToDataReports(){
+            this.$router.replace('data-reports');
         }
     },
     mounted() {
@@ -151,6 +154,8 @@ export default {
     },
     template: `
         <div class="centered-div">
+            <div class="section-header"><a v-on:click="goToDataReports">Data Reports</a></div>
+
             <table id="reports-list">
                 <tr>
                     <th>Report period</th>
@@ -165,14 +170,14 @@ export default {
                 </tr>
                 <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
                     <td v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
-                    <td>{{ item.contract_name }}</td>
+                    <td>{{ item.contract.name }}</td>
                     <td>{{ item.signed_by_teacher }}</td>
                     <td>{{ item.signed_by_head_of_cathedra }}</td>
-                    <td>{{ item.signed_by_inspectors }}</td>
+                    <td>{{ item.signed_by_inspector }}</td>
                     <td>{{ item.signed_by_head_of_human_resources }}</td>
-                    <td v-on:click="editReport(item)">Edit</td>
-                    <td v-on:click="deleteReport(item.id)">Delete</td>
-                    <td v-on:click="signReport(item.id)">Sign</td>
+                    <td class="button-label" v-on:click="editReport(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteReport(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="signReport(item.id)">Sign</td>
                 </tr>
             </table>
 
@@ -189,8 +194,8 @@ export default {
                         </tr>
                         <tr class="reported-parameter-item" v-for="(item, index) in reported_parameters" v-bind:id="item.id" v-bind:key="item.id">
                             <td>{{ item.parameter_name }}</td>
-                            <td><input v-model="item.done"></td>
-                            <td><input v-model="item.confirmation_text">
+                            <td>{{ item.done }}</td>
+                            <td><input v-model="item.confirmation_text" readonly>
                                 <input v-bind:id="'upload-file-' + index"
                                   type="file"
                                   @change="onFileChanged(item, $event)"

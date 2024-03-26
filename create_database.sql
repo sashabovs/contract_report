@@ -408,7 +408,7 @@ ALTER TABLE IF EXISTS contract_report.reported_parameters
     ADD CONSTRAINT reported_parameters_report_fk FOREIGN KEY (report_id)
     REFERENCES contract_report.reports (id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE RESTRICT
+    ON DELETE CASCADE
     NOT VALID;
 CREATE INDEX IF NOT EXISTS fki_reported_parameters_report_fk
     ON contract_report.reported_parameters(report_id);
@@ -471,7 +471,7 @@ ALTER TABLE IF EXISTS contract_report.report_parameter_confirmations
     ADD CONSTRAINT report_parameter_confirmations_reported_parameter_fk FOREIGN KEY (reported_parameter_id)
     REFERENCES contract_report.reported_parameters (id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE RESTRICT
+    ON DELETE CASCADE
     NOT VALID;
 CREATE INDEX IF NOT EXISTS fki_report_parameter_confirmations_reported_parameter_fk
     ON contract_report.report_parameter_confirmations(reported_parameter_id);

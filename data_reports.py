@@ -45,6 +45,8 @@ def get_reports(id):
     if not id in [
         db_utils.ReportTypes.SIGNING_PROGRESS.value,
         db_utils.ReportTypes.EXECUTION_PROGRESS.value,
+        db_utils.ReportTypes.SIGNING_LOG.value,
+        db_utils.ReportTypes.DATA_CHANGE_LOG.value,
     ]:
         return flask.Response(
             "Unknown id for data report selected",
@@ -56,12 +58,6 @@ def get_reports(id):
         error += "Empty from. "
     if data.get("till") is None:
         error += "Empty till. "
-    # if data.get("faculty_id") is None:
-    #     error += "Empty faculty_id. "
-    # if data.get("cathedra_id") is None:
-    #     error += "Empty cathedra_id. "
-    # if data.get("user_id") is None:
-    #     error += "Empty user_id. "
     if data.get("extended") is None:
         error += "Empty extended. "
 
@@ -70,30 +66,6 @@ def get_reports(id):
             error,
             status=400,
         )
-
-    #     with contracts_tmp as (
-    #             select contr.id as contract_id
-    #     FROM contract_report.contracts as contr
-    #     inner join contract_report.users on users.id = contr.user_id
-    #     left join contract_report.cathedras on cathedras.id = users.cathedra_id
-    #     where contr.valid_from <= '2024-03-30' and contr.valid_till >= '2024-03-30'
-    #     and cathedras.faculty_id = 2
-    #     ),
-    #         done_params as(
-    #         SELECT contr.contract_id, rep_par.parameter_id, sum(rep_par.done) as done
-    #     FROM contracts_tmp as contr
-    #     left join contract_report.reports as reports on reports.contract_id = contr.contract_id and reports.signed_by_head_of_human_resources
-    #     left join contract_report.reported_parameters as rep_par on rep_par.report_id = reports.id
-    #     group by contr.contract_id, rep_par.parameter_id)
-    #
-    #     SELECT contr.contract_id, par_temp.parameter_id, par_temp.requirement, par_temp.points_promised, coalesce(done_params.done, 0) as done,
-    #     (coalesce(done_params.done, 0)::decimal/par_temp.requirement*100)::int as done_perc,
-    #     (par_temp.points_promised*coalesce(done_params.done, 0)::decimal/par_temp.requirement)::int as done_points
-    # FROM contracts_tmp as contr
-    # left join contract_report.contracts on contracts.id = contr.contract_id
-    # left join contract_report.parameters_templates as par_temp on par_temp.template_id = contracts.template_id
-    # left join done_params on done_params.contract_id = contr.contract_id and done_params.parameter_id = par_temp.parameter_id
-    # order by contract_id, parameter_id
 
     date_from = datetime.strptime(data["from"], "%Y-%m-%d").date()
     date_till = (datetime.strptime(data["till"], "%Y-%m-%d").date(),)
@@ -114,7 +86,9 @@ def get_reports(id):
             )
 
             if data.get("user"):
-                contracts_tmp = contracts_tmp.filter(model.Users.id == data["user_id"]["id"])
+                contracts_tmp = contracts_tmp.filter(
+                    model.Users.id == data["user"]["id"]
+                )
             elif data.get("cathedra"):
                 contracts_tmp = contracts_tmp.filter(
                     model.Users.cathedra_id == int(data["cathedra"]["id"])
@@ -250,28 +224,6 @@ def get_reports(id):
             return flask.Response(report_html_body, mimetype="text/xml")
         elif id == db_utils.ReportTypes.SIGNING_PROGRESS.value:
 
-            # select 'teacher',  contracts.user_id as user_id, reports.id as report_id
-            # from contract_report.reports
-            # left join contract_report.contracts on contracts.id = reports.contract_id
-            # where reports.period_of_report between '2022-03-30' and '2024-03-30' and not reports.signed_by_teacher
-            #
-            # union all
-            # select 'head of cathedra',  cathedras.head_id as user_id, reports.id as report_id
-            # from contract_report.reports
-            # left join contract_report.contracts on contracts.id = reports.contract_id
-            # left join contract_report.users on users.id = contracts.user_id
-            # left join contract_report.cathedras on users.cathedra_id = cathedras.id
-            # left join contract_report.opened_period_for_reports on opened_period_for_reports.period = reports.period_of_report
-            # where reports.period_of_report between '2022-03-30' and '2024-03-30' and opened_period_for_reports.time_of_closing < current_date and not reports.signed_by_head_of_cathedra
-            #
-            # union all
-            # select 'inspector',  parameters.inspector_id as user_id, reports.id as report_id
-            # from contract_report.reports
-            # left join contract_report.reported_parameters on reported_parameters.report_id = reports.id
-            # left join contract_report.parameters on parameters.id = reported_parameters.parameter_id
-            # left join contract_report.opened_period_for_reports on opened_period_for_reports.period = reports.period_of_report
-            # where reports.period_of_report between '2022-03-30' and '2024-03-30' and opened_period_for_reports.time_of_closing < current_date and not reported_parameters.signed_by_inspector
-
             teachers_table = (
                 session.query(
                     model.Contracts.user_id.label("user_id"),
@@ -356,6 +308,54 @@ def get_reports(id):
                 + df_3.to_html()
             )
             return flask.Response(report_html_body, mimetype="text/plain")
+        elif id == db_utils.ReportTypes.SIGNING_LOG.value:
+
+            log_table = (
+                sqlalchemy.select(
+                    model.SignatureLogs.time_of_change,
+                    model.Users.full_name,
+                    model.Reports.period_of_report,
+                    model.SignatureLogs.action,
+                )
+                .join(model.SignatureLogs.report)
+                .join(model.SignatureLogs.user)
+                .where(model.SignatureLogs.time_of_change.between(date_from, date_till))
+                .order_by(model.SignatureLogs.time_of_change)
+            )
+
+            df = pd.read_sql(log_table, session.bind)
+
+            def color_negative_red(val):
+                color = "red" if val < 0 else "black"
+                return f"color: {color}"
+
+            df.style.applymap(color_negative_red)
+
+            return flask.Response(df.to_html(), mimetype="text/plain")
+        elif id == db_utils.ReportTypes.DATA_CHANGE_LOG.value:
+
+            log_table = (
+                sqlalchemy.select(
+                    model.DataChangeLogs.time_of_change,
+                    model.Users.full_name,
+                    model.DataChangeLogs.object_of_change,
+                    model.DataChangeLogs.befor_change,
+                    model.DataChangeLogs.after_change,
+                )
+                .join(model.DataChangeLogs.user)
+                .where(model.DataChangeLogs.time_of_change.between(date_from, date_till))
+                .order_by(model.DataChangeLogs.time_of_change)
+            )
+
+            df = pd.read_sql(log_table, session.bind)
+
+            def color_negative_red(val):
+                color = "red" if val < 0 else "black"
+                return f"color: {color}"
+
+            df.style.applymap(color_negative_red)
+
+            return flask.Response(df.to_html(), mimetype="text/plain")
 
 
 def create_html_table_for_report(table, data):
@@ -381,14 +381,11 @@ def create_html_table_for_report(table, data):
     if data.get("user_id"):
         stmt = stmt.filter(userReport.id == data["user_id"])
     elif data.get("cathedra_id"):
-        stmt = stmt.filter(
-            userReport.cathedra_id == int(data["cathedra_id"])
-        )
+        stmt = stmt.filter(userReport.cathedra_id == int(data["cathedra_id"]))
     elif data.get("faculty_id"):
-        stmt = stmt.filter(
-            model.Cathedras.faculty_id == int(data["faculty_id"])
-        )
+        stmt = stmt.filter(model.Cathedras.faculty_id == int(data["faculty_id"]))
     return stmt
+
 
 @data_reports_app.route("/faculties")
 def get_faculties():

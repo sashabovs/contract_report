@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import datetime
 import json
 import flask
 import sqlalchemy
@@ -71,10 +71,30 @@ def get_reports():
                 .where(model.Users.cathedra_id == int(cathedra[0]))
             )
         elif role == db_utils.Role.HEAD_OF_HUMAN_RESOURCES.value:
+            signed_by_inspectors_table = (
+                session.query(
+                    model.ReportedParameters.report_id,
+                    sqlalchemy.func.min(
+                        model.ReportedParameters.signed_by_inspector.cast(
+                            sqlalchemy.Integer
+                        )
+                    )
+                    .cast(sqlalchemy.Boolean)
+                    .label("signed_by_inspector"),
+                )
+                .select_from(model.ReportedParameters)
+                .group_by(model.ReportedParameters.report_id)
+                .cte("signed_by_inspectors_table")
+            )
 
             stmt = (
-                stmt.where(model.Reports.signed_by_teacher == True)
+                stmt.join(
+                    signed_by_inspectors_table,
+                    signed_by_inspectors_table.c.report_id == model.Reports.id,
+                )
+                .where(model.Reports.signed_by_teacher == True)
                 .where(model.Reports.signed_by_head_of_cathedra == True)
+                .where(signed_by_inspectors_table.c.signed_by_inspector == True)
                 .where(model.Reports.signed_by_head_of_human_resources == False)
             )
 
@@ -84,7 +104,9 @@ def get_reports():
             sqlalchemy.select(
                 model.ReportedParameters.report_id,
                 sqlalchemy.func.min(
-                    model.ReportedParameters.signed_by_inspector.cast(sqlalchemy.Integer)
+                    model.ReportedParameters.signed_by_inspector.cast(
+                        sqlalchemy.Integer
+                    )
                 )
                 .cast(sqlalchemy.Boolean)
                 .label("signed_by_inspector"),
@@ -99,7 +121,10 @@ def get_reports():
                 {
                     "id": row[0],
                     "period_of_report": str(row[1]),
-                    "contract": {"id":row[2],"name":row[4]+'('+ str(row[5])+ '-' + str(row[6]) +')'},
+                    "contract": {
+                        "id": row[2],
+                        "name": row[4] + "(" + str(row[5]) + "-" + str(row[6]) + ")",
+                    },
                     "user_id": row[3],
                     "valid_from": str(row[5]),
                     "valid_till": str(row[6]),
@@ -141,30 +166,33 @@ def get_reported_parameters():
     params_report_id = flask.request.args.get("report_id", type=int)
 
     with db_utils.auto_session(db_utils.engine_reader) as session:
-        stmt = sqlalchemy.select(
-            model.ReportedParameters.id,
-            model.ReportedParameters.report_id,
-            model.ReportedParameters.parameter_id,
-            model.Parameters.name,
-            model.ReportedParameters.done,
-            model.ReportedParameters.confirmation_text,
-            model.ReportedParameters.inspector_comment,
-            model.ReportedParameters.signed_by_inspector,
-        ).join(model.ReportedParameters.parameter)
+        stmt = (
+            sqlalchemy.select(
+                model.ReportedParameters.id,
+                model.ReportedParameters.report_id,
+                model.ReportedParameters.parameter_id,
+                model.Parameters.name,
+                model.ReportedParameters.done,
+                model.ReportedParameters.confirmation_text,
+                model.ReportedParameters.inspector_comment,
+                model.ReportedParameters.signed_by_inspector,
+                model.Users.full_name,
+                # (model.ReportedParameters.done >= model.ParametersTemplates.requirement).label("parameter_requirement_fulfilled"),
+            )
+            .join(model.ReportedParameters.parameter)
+            .join(model.Reports, model.Reports.id == model.ReportedParameters.report_id)
+            .join(model.Contracts, model.Reports.contract_id == model.Contracts.id)
+            .join(model.Users, model.Users.id == model.Contracts.user_id)
+            # .join(model.ParametersTemplates, sqlalchemy.sql.operators.and_(model.ParametersTemplates.template_id == model.Contracts.template_id, model.ParametersTemplates.parameter_id == model.Parameters.id))
+        )
 
         if params_report_id:
             stmt = stmt.where(model.ReportedParameters.report_id == params_report_id)
 
         params_inspector_id = flask.request.args.get("inspector_id")
         if role == db_utils.Role.INSPECTOR.value:
-            # stmt = (
-            #     stmt.join(
-            #         model.Reports, model.Reports.id == model.ReportedParameters.report_id
-            #     )
-            #     .join(model.Contracts, model.Reports.contract_id == model.Contracts.id)
-            #     .join(model.Users, model.Users.id == model.Contracts.user_id)
-            # )
-            stmt = stmt.join(model.ReportedParameters.report).where(model.Reports.signed_by_head_of_cathedra == True)
+
+            stmt = stmt.where(model.Reports.signed_by_head_of_cathedra == True)
 
             if params_inspector_id:
                 stmt = stmt.where(
@@ -176,10 +204,51 @@ def get_reported_parameters():
                     status=400,
                 )
 
-
-
         rows = session.execute(stmt).all()
 
+        # done for all parameters
+        contracts_cte = (
+            session.query(
+                model.Reports.contract_id,
+            )
+            .select_from(model.Reports)
+            .where(model.Reports.id == params_report_id)
+            .cte("contracts_cte")
+        )
+
+        stmt = (
+            sqlalchemy.select(
+                model.ReportedParameters.parameter_id,
+                sqlalchemy.sql.func.sum(model.ReportedParameters.done)
+                >= sqlalchemy.sql.func.max(model.ParametersTemplates.requirement),
+            )
+            .select_from(model.Reports)
+            .join(
+                model.ReportedParameters,
+                model.ReportedParameters.report_id == model.Reports.id,
+            )
+            .join(
+                contracts_cte, contracts_cte.c.contract_id == model.Reports.contract_id
+            )
+            .join(model.Contracts, contracts_cte.c.contract_id == model.Contracts.id)
+            .join(
+                model.ParametersTemplates,
+                sqlalchemy.sql.operators.and_(
+                    model.ParametersTemplates.template_id
+                    == model.Contracts.template_id,
+                    model.ParametersTemplates.parameter_id
+                    == model.ReportedParameters.parameter_id,
+                ),
+            )
+            .where(model.Reports.signed_by_head_of_human_resources)
+            .group_by(model.ReportedParameters.parameter_id)
+        )
+        done_for_all_parameters = session.execute(stmt).all()
+        done_for_all_parameters_dict = {
+            row[0]: row[1] for row in done_for_all_parameters
+        }
+
+        # get confirmation files
         stmt = sqlalchemy.select(
             model.ReportParameterConfirmations.reported_parameter_id,
             model.ReportParameterConfirmations.id,
@@ -198,6 +267,7 @@ def get_reported_parameters():
             [
                 {
                     "id": row[0],
+                    "full_name": row[8],
                     "report_id": row[1],
                     "parameter_id": row[2],
                     "parameter_name": row[3],
@@ -206,6 +276,9 @@ def get_reported_parameters():
                     "inspector_comment": row[6],
                     "signed_by_inspector": row[7],
                     "confirmation_file": confirmation_dict.get(row[0]),
+                    "parameter_requirement_fulfilled": done_for_all_parameters_dict.get(
+                        row[2]
+                    ),
                 }
                 for row in rows
             ]
@@ -231,6 +304,17 @@ def delete_report(id):
         )
 
     session = sqlalchemy.orm.Session(db_utils.engine_writer)
+
+    stmt = sqlalchemy.select(model.Reports.signed_by_teacher).where(
+        model.Reports.id == id
+    )
+    is_signed = session.execute(stmt).first()
+    if is_signed[0]:
+        return flask.Response(
+            "Report already signed",
+            status=400,
+        )
+
     session.query(model.ReportedParameters).filter(
         model.ReportedParameters.report_id == id
     ).delete()
@@ -262,7 +346,7 @@ def save_report():
 
     data = flask.request.get_json()
     error = ""
-    if not data.get("period_of_report"):
+    if not data.get("period_of_report") or not data["period_of_report"].get("period"):
         error += "Empty period_of_report. "
     if not data.get("contract") or not data["contract"].get("id"):
         error += "Empty contract_id. "
@@ -280,7 +364,7 @@ def save_report():
         )
     # data["contract_id"] = int(data["contract_id"])
     reports = model.Reports(
-        period_of_report=data["period_of_report"],
+        period_of_report=data["period_of_report"]["period"],
         contract_id=data["contract"]["id"],
         signed_by_teacher=data["signed_by_teacher"],
         signed_by_head_of_cathedra=data["signed_by_head_of_cathedra"],
@@ -339,7 +423,7 @@ def edit_report(id):
 
     data = flask.request.get_json()
     error = ""
-    if not data.get("period_of_report"):
+    if not data.get("period_of_report") or not data["period_of_report"].get("period"):
         error += "Empty period_of_report. "
     if not data.get("contract") or not data["contract"].get("id"):
         error += "Empty contract_id. "
@@ -359,7 +443,7 @@ def edit_report(id):
     session = sqlalchemy.orm.Session(db_utils.engine_writer)
     session.query(model.Reports).filter(model.Reports.id == id).update(
         {
-            model.Reports.period_of_report: data["period_of_report"],
+            model.Reports.period_of_report: data["period_of_report"]["period"],
             model.Reports.contract_id: data["contract"]["id"],
             model.Reports.signed_by_teacher: data["signed_by_teacher"],
             model.Reports.signed_by_head_of_cathedra: data[
@@ -407,6 +491,21 @@ def sign_reported_parameter(id):
 
     stmt.update({model.ReportedParameters.signed_by_inspector: True})
 
+    stmt2 = (
+        sqlalchemy.select(model.ReportedParameters.report_id, model.Parameters.name)
+        .join(model.ReportedParameters.parameter)
+        .where(model.ReportedParameters.id == id)
+    )
+    reported_parameter_row = session.execute(stmt2).first()
+
+    log = model.SignatureLogs(
+        time_of_change=datetime.datetime.now(),
+        user_id=token_utils.get_user_id(),
+        report_id=reported_parameter_row[0],
+        action=str(reported_parameter_row[1]) + " signed",
+    )
+    session.add(log)
+
     session.commit()
 
     return flask.Response(status=200)
@@ -449,6 +548,14 @@ def sign_report(id):
     elif role == db_utils.Role.HEAD_OF_HUMAN_RESOURCES.value:
         stmt.update({model.Reports.signed_by_head_of_human_resources: True})
 
+    log = model.SignatureLogs(
+        time_of_change=datetime.datetime.now(),
+        user_id=token_utils.get_user_id(),
+        report_id=id,
+        action="Report signed",
+    )
+    session.add(log)
+
     session.commit()
 
     return flask.Response(status=200)
@@ -477,7 +584,6 @@ def unsign_report(id):
             status=400,
         )
 
-
     session = sqlalchemy.orm.Session(db_utils.engine_writer)
     stmt = session.query(model.Reports).filter(model.Reports.id == id)
 
@@ -487,6 +593,14 @@ def unsign_report(id):
             model.Reports.signed_by_head_of_cathedra: False,
         }
     )
+
+    log = model.SignatureLogs(
+        time_of_change=datetime.datetime.now(),
+        user_id=token_utils.get_user_id(),
+        report_id=id,
+        action="Report unsigned",
+    )
+    session.add(log)
 
     session.commit()
 
@@ -527,6 +641,39 @@ def edit_reported_parameters():
 
     session = sqlalchemy.orm.Session(db_utils.engine_writer)
     for reported_parameter in data:
+        stmt = (
+            sqlalchemy.select(
+                model.ReportedParameters.done,
+                model.ReportedParameters.confirmation_text,
+                model.Reports.period_of_report,
+            )
+            .join(model.ReportedParameters.report)
+            .where(model.ReportedParameters.id == reported_parameter["id"])
+        )
+        old_row = session.execute(stmt).first()
+
+        if old_row[0] != reported_parameter["done"]:
+            log = model.DataChangeLogs(
+                time_of_change=datetime.datetime.now(),
+                user_id=token_utils.get_user_id(),
+                object_of_change="Report " + str(old_row[2]) + ', field "done" changed',
+                befor_change=old_row[0],
+                after_change=reported_parameter["done"],
+            )
+            session.add(log)
+
+        if old_row[1] != reported_parameter["confirmation_text"]:
+            log = model.DataChangeLogs(
+                time_of_change=datetime.datetime.now(),
+                user_id=token_utils.get_user_id(),
+                object_of_change="Report "
+                + str(old_row[2])
+                + ', field "confirmation_text" changed',
+                befor_change=old_row[1],
+                after_change=reported_parameter["confirmation_text"],
+            )
+            session.add(log)
+
         session.query(model.ReportedParameters).filter(
             model.ReportedParameters.id == reported_parameter["id"]
         ).update(
@@ -537,6 +684,7 @@ def edit_reported_parameters():
                 ],
             }
         )
+
     session.commit()
 
     return flask.Response(status=200)
@@ -544,7 +692,6 @@ def edit_reported_parameters():
 
 @reports_app.route("/reported-parameters/<int:id>/upload_file", methods=["POST"])
 def upload_confirmation(id):
-    print("Upload conf")
     if "file" not in flask.request.files:
         return flask.Response(
             "No file to save",
@@ -613,3 +760,39 @@ def get_reported_parameter_confirmation_file(id):
                 "file_name": row[1],
             }
         )
+
+
+@reports_app.route("/reported-parameter/<int:id>/save-comment", methods=["POST"])
+def save_comment(id):
+    data = flask.request.get_json()
+
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role(
+            [
+                db_utils.Role.INSPECTOR,
+            ],
+            role,
+        )
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    session = sqlalchemy.orm.Session(db_utils.engine_writer)
+    stmt = (
+        session.query(model.ReportedParameters)
+        .filter(model.ReportedParameters.id == id)
+        .update({model.ReportedParameters.inspector_comment: data["inspector_comment"]})
+    )
+
+    session.commit()
+
+    return flask.Response(status=200)

@@ -9,7 +9,8 @@ export default {
             isEditingReport: false,
             isEditingReportParameters: false,
             reports: [],
-            report: {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false},
+            report: {"period_of_report":{},"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false},
+            periods_of_report:[],
 
             reported_parameters: [],
 
@@ -24,6 +25,19 @@ export default {
             this.selected_report = report_id;
             this.getReportedParameters(report_id);
             this.isEditingReportParameters=true;
+        },
+        getPeriodsOfReport() {
+            axios.get('/periods', {
+                headers: {
+                    'Token': Token.token,
+                }
+            })
+            .then((res) => {
+                this.periods_of_report = res.data;
+            })
+            .catch((error) => {
+              console.log(error.response.data);
+            })
         },
         getContracts() {
             axios.get('/contracts', {
@@ -77,7 +91,7 @@ export default {
         },
         onAddReportClick(){
             this.isEditingReport = true;
-            this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+            this.report = {"period_of_report":{},"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
         },
 
 
@@ -117,7 +131,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingReport = false;
-                    this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+                    this.report = {"period_of_report":{},"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
                     this.getReports();
                 })
                 .catch((error) => {
@@ -131,7 +145,7 @@ export default {
                 })
                 .then((res) => {
                     this.isEditingReport = false;
-                    this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+                    this.report = {"period_of_report":{},"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
                     this.getReports();
                 })
                 .catch((error) => {
@@ -143,7 +157,7 @@ export default {
         },
         cancelReport() {
             this.isEditingReport = false;
-            this.report = {"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
+            this.report = {"period_of_report":{},"contract":{},"signed_by_teacher":false, "signed_by_head_of_cathedra":false, "signed_by_head_of_human_resources":false};
             this.getReports();
         },
         signReport(report_id) {
@@ -250,6 +264,9 @@ export default {
             if (event.target.files) {
                 item.is_file_changed = true
             }
+        },
+        goToDataReports(){
+            this.$router.replace('data-reports');
         }
     },
     mounted() {
@@ -257,9 +274,12 @@ export default {
         this.user_id = token_data.user_id;
         this.getReports();
         this.getContracts();
+        this.getPeriodsOfReport();
     },
     template: `
         <div class="centered-div">
+            <div class="section-header"><a v-on:click="goToDataReports">Data Reports</a></div>
+
             <button id="add-report" v-on:click="onAddReportClick">Add report</button>
             <table id="reports-list">
                 <tr>
@@ -274,22 +294,37 @@ export default {
                     <th></th>
                 </tr>
                 <tr class="report-item" v-for="(item, index) in reports" v-bind:id="item.id" v-bind:key="item.id">
-                    <td v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
-                    <td>{{ item.contract_name }}</td>
+                    <td class="button-label" v-on:click="selectReport(item.id)">{{ item.period_of_report }}</td>
+                    <td>{{ item.contract.name }}</td>
                     <td>{{ item.signed_by_teacher }}</td>
                     <td>{{ item.signed_by_head_of_cathedra }}</td>
-                    <td>{{ item.signed_by_inspectors }}</td>
+                    <td>{{ item.signed_by_inspector }}</td>
                     <td>{{ item.signed_by_head_of_human_resources }}</td>
-                    <td v-on:click="editReport(item)">Edit</td>
-                    <td v-on:click="deleteReport(item.id)">Delete</td>
-                    <td v-on:click="signReport(item.id)">Sign</td>
+                    <td class="button-label" v-on:click="editReport(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteReport(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="signReport(item.id)">Sign</td>
                 </tr>
             </table>
 
             <div class="modal-background" v-show="isEditingReport">
                 <div class="fully-centered-div" id='edit-report'>
                     <label for="report-period-date">Report period:</label>
-                    <input name="report-period-date" id="report-period-date" v-model="report.period_of_report" type="date"/>
+
+                    <p-dropdown v-model="report.period_of_report" v-bind:options="periods_of_report" filter optionLabel="period" placeholder="Select a Period" class="w-full md:w-14rem">
+                        <template #value="slotProps">
+                            <div v-if="slotProps.value" class="flex align-items-center">
+                                <div>{{ slotProps.value.period }}</div>
+                            </div>
+                            <span v-else>
+                                {{ slotProps.placeholder }}
+                            </span>
+                        </template>
+                        <template #option="slotProps">
+                            <div class="flex align-items-center">
+                                <div>{{ slotProps.option.period }}</div>
+                            </div>
+                        </template>
+                    </p-dropdown>
 
                     <br>
                     <label for="report-contract">Contract:</label>
@@ -330,7 +365,7 @@ export default {
                             <th>Signed by inspector</th>
                         </tr>
                         <tr class="reported-parameter-item" v-for="(item, index) in reported_parameters" v-bind:id="item.id" v-bind:key="item.id">
-                            <td>{{ item.parameter_name }}</td>
+                            <td v-bind:class="item.parameter_requirement_fulfilled ? 'parameter-requirement-fulfilled':''">{{ item.parameter_name }}</td>
                             <td><input v-model="item.done"></td>
                             <td><input v-model="item.confirmation_text">
                                 <input v-bind:id="'upload-file-' + index"

@@ -170,8 +170,8 @@ export default {
                     <td>{{ item.role }}</td>
                     <td>{{ item.login }}</td>
                     <td>{{ item.email }}</td>
-                    <td v-on:click="editUser(item)">Edit</td>
-                    <td v-on:click="deleteUser(item.id)">Delete</td>
+                    <td class="button-label" v-on:click="editUser(item)">Edit</td>
+                    <td class="button-label" v-on:click="deleteUser(item.id)">Delete</td>
                 </tr>
             </table>
 

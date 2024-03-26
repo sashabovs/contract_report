@@ -28,11 +28,15 @@ def get_users():
         )
         params_faculty_id = flask.request.args.get("faculty_id", type=int)
         params_cathedra_id = flask.request.args.get("cathedra_id", type=int)
+        params_role = flask.request.args.get("role")
         if params_cathedra_id:
             stmt = stmt.where(model.Cathedras.id == params_cathedra_id)
         else:
             if params_faculty_id:
                 stmt = stmt.where(model.Cathedras.faculty_id == params_faculty_id)
+
+        if params_role:
+            stmt = stmt.where(model.Users.role == params_role)
 
         rows = session.execute(stmt).all()
 

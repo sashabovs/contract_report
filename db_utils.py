@@ -22,9 +22,12 @@ class Role(Enum):
     TEACHER = "teacher"
     HEAD_OF_CATHEDRA = "head_of_cathedra"
 
+
 class ReportTypes(Enum):
     EXECUTION_PROGRESS = "execution_progress"
     SIGNING_PROGRESS = "signing_progress"
+    SIGNING_LOG = "signing_log"
+    DATA_CHANGE_LOG = "data_change_log"
 
 
 def get_reader_connection_string():

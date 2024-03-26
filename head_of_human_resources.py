@@ -383,6 +383,163 @@ def save_parameter():
 # //////////////
 
 
+@head_of_human_resources_app.route("/periods")
+def get_periods():
+
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES, db_utils.Role.TEACHER], role)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    with db_utils.auto_session(db_utils.engine_reader) as session:
+        stmt = (
+            sqlalchemy.select(
+                model.OpenedPeriodForReports
+            )
+
+        )
+        rows = session.execute(stmt).all()
+        mapping = [row._mapping["OpenedPeriodForReports"] for row in rows]
+
+        return json.dumps(
+            [
+                {
+                    "id": row.id,
+                    "period": str(row.period),
+                    "time_of_opening": str(row.time_of_opening),
+                    "time_of_closing": str(row.time_of_closing),
+                }
+                for row in mapping
+            ]
+        )
+
+
+@head_of_human_resources_app.route("/periods/<int:id>", methods=["PUT"])
+def edit_period(id):
+
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    data = flask.request.get_json()
+    error = ""
+    if not data.get("period"):
+        error += "Empty period. "
+    if not data.get("time_of_opening"):
+        error += "Empty time_of_opening. "
+    if not data.get("time_of_closing"):
+        error += "Empty time_of_closing. "
+    if error:
+        return flask.Response(
+            error,
+            status=400,
+        )
+
+    session = sqlalchemy.orm.Session(db_utils.engine_writer)
+
+    session.query(model.OpenedPeriodForReports).filter(model.OpenedPeriodForReports.id == id).update(
+        {
+            model.OpenedPeriodForReports.period: data["period"],
+            model.OpenedPeriodForReports.time_of_opening: data["time_of_opening"],
+            model.OpenedPeriodForReports.time_of_closing: data["time_of_closing"],
+        }
+    )
+    session.commit()
+
+    return flask.Response(status=200)
+
+
+@head_of_human_resources_app.route("/periods/<int:id>", methods=["DELETE"])
+def delete_period(id):
+
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    session = sqlalchemy.orm.Session(db_utils.engine_writer)
+    session.query(model.OpenedPeriodForReports).filter(model.OpenedPeriodForReports.id == id).delete()
+    session.commit()
+
+    return flask.Response(status=200)
+
+
+@head_of_human_resources_app.route("/periods", methods=["POST"])
+def save_period():
+    try:
+        role = token_utils.get_role()
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+    try:
+        token_utils.check_role([db_utils.Role.HEAD_OF_HUMAN_RESOURCES], role)
+    except RuntimeError as e:
+        return flask.Response(
+            str(e),
+            status=400,
+        )
+
+    data = flask.request.get_json()
+    error = ""
+    if not data.get("period"):
+        error += "Empty period. "
+    if not data.get("time_of_opening"):
+        error += "Empty time_of_opening. "
+    if not data.get("time_of_closing"):
+        error += "Empty time_of_closing. "
+
+    if error:
+        return flask.Response(
+            error,
+            status=400,
+        )
+
+    period = model.OpenedPeriodForReports(
+        period=data["period"], time_of_opening=data["time_of_opening"], time_of_closing=data["time_of_closing"]
+    )
+    session = sqlalchemy.orm.Session(db_utils.engine_writer)
+    session.add(period)
+    session.commit()
+
+    return flask.Response(status=200)
+
+# //////////////////////////
+
+
+
 @head_of_human_resources_app.route("/inspection-periods")
 def get_inspection_periods():
 

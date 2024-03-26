@@ -29,6 +29,17 @@ def get_cathedra():
 
     return cathedra
 
+def get_user_id():
+    token = flask.request.headers.get("Token")
+    if not token:
+        raise RuntimeError("Access token is empty")
+
+    decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    user_id = decoded_token.get("user_id")
+    if not user_id:
+        raise RuntimeError("No user id")
+
+    return user_id
 
 def check_role(valid_role, role):
     if role not in [r.value for r in valid_role]:

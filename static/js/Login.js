@@ -1,5 +1,6 @@
 
 import Token from './Token.js'
+import ErrorHandler from './ErrorHandler.js'
 
 export default {
     components: {
@@ -7,7 +8,7 @@ export default {
     data() {
         const date = Vue.ref();
         return {
-            loginVal: "muxina",
+            loginVal: "melnik",
             passwordVal: "123",
         };
     },
@@ -34,6 +35,7 @@ export default {
             })
             .catch((error) => {
               console.log(error.response.data)
+              ErrorHandler.showError(error.response.data)
             })
         }
     },
