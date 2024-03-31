@@ -376,7 +376,7 @@ export default {
                                 <label v-if="item.confirmation_file" v-on:click="downloadFile(item)">{{ item.confirmation_file.file_name }}</label>
                             </td>
                             <td>{{ item.inspector_comment }}</td>
-                            <td>{{ item.signed_by_inspector }}</td>
+                            <td><input type="checkbox" disabled v-model="item.signed_by_inspector"></td>
                         </tr>
                     </table>
                     <button v-on:click="saveReportedParameters">Save</button>

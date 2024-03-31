@@ -79,8 +79,8 @@ def get_reports(id):
                 .join(model.Cathedras, model.Cathedras.id == model.Users.cathedra_id)
                 .filter(
                     sqlalchemy.sql.operators.and_(
-                        model.Contracts.valid_from <= date_from,
-                        model.Contracts.valid_till >= date_till,
+                        model.Contracts.valid_from >= date_from,
+                        model.Contracts.valid_till <= date_till,
                     )
                 )
             )
@@ -128,8 +128,15 @@ def get_reports(id):
 
             if data["extended"]:
                 stmt = sqlalchemy.select(
-                    contracts_tmp.c.contract_id,
-                    model.ParametersTemplates.parameter_id,
+                    (
+                        model.Users.full_name
+                        + " ("
+                        + model.Contracts.valid_from.cast(sqlalchemy.String)
+                        + "-"
+                        + model.Contracts.valid_till.cast(sqlalchemy.String)
+                        + ")"
+                    ).label("contract"),
+                    model.Parameters.name.label("parameter"),
                     model.ParametersTemplates.requirement,
                     model.ParametersTemplates.points_promised,
                     sqlalchemy.sql.func.coalesce(done_params.c.done, 0).label("done"),
@@ -154,7 +161,14 @@ def get_reports(id):
                 )
             else:
                 stmt = sqlalchemy.select(
-                    contracts_tmp.c.contract_id,
+                    (
+                        model.Users.full_name
+                        + " ("
+                        + model.Contracts.valid_from.cast(sqlalchemy.String)
+                        + "-"
+                        + model.Contracts.valid_till.cast(sqlalchemy.String)
+                        + ")"
+                    ).label("contract"),
                     sqlalchemy.sql.func.sum(
                         model.ParametersTemplates.points_promised
                     ).label("points_promised"),
@@ -208,10 +222,15 @@ def get_reports(id):
                     ),
                     isouter=True,
                 )
+                .join(model.Users, model.Users.id == model.Contracts.user_id)
+                .join(
+                    model.Parameters,
+                    model.Parameters.id == model.ParametersTemplates.parameter_id,
+                )
             )
 
             if not data["extended"]:
-                stmt = stmt.group_by(contracts_tmp.c.contract_id)
+                stmt = stmt.group_by(model.Users.full_name,model.Contracts.valid_from,model.Contracts.valid_till)
 
             df = pd.read_sql(stmt, session.bind)
 
@@ -300,11 +319,11 @@ def get_reports(id):
             df_3.style.applymap(color_negative_red)
 
             report_html_body = (
-                "<label>Teachers:</label>"
+                "<br><label>Teachers:</label>"
                 + df_1.to_html()
-                + "<label>Head of cathedra:</label>"
+                + "<br><label>Head of cathedra:</label>"
                 + df_2.to_html()
-                + "<label>Inspectors:</label>"
+                + "<br><label>Inspectors:</label>"
                 + df_3.to_html()
             )
             return flask.Response(report_html_body, mimetype="text/plain")
@@ -343,7 +362,9 @@ def get_reports(id):
                     model.DataChangeLogs.after_change,
                 )
                 .join(model.DataChangeLogs.user)
-                .where(model.DataChangeLogs.time_of_change.between(date_from, date_till))
+                .where(
+                    model.DataChangeLogs.time_of_change.between(date_from, date_till)
+                )
                 .order_by(model.DataChangeLogs.time_of_change)
             )
 
@@ -362,13 +383,13 @@ def create_html_table_for_report(table, data):
     userReport = sqlalchemy.orm.aliased(model.Users)
     stmt = (
         sqlalchemy.select(
-            (model.Users.full_name + " (" + table.c.user_id + ")").label("user_id"),
+            (model.Users.full_name + " (" + table.c.user_id + ")").label("user"),
             (
                 model.Reports.period_of_report.cast(sqlalchemy.String)
                 + " ("
                 + userReport.full_name
                 + ")"
-            ).label("report_id"),
+            ).label("report"),
         )
         .select_from(table)
         .join(model.Users, model.Users.id == table.c.user_id)

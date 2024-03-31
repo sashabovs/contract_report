@@ -167,72 +167,80 @@ export default {
                         </ul>
                     </td>
                     <td>
-                       <div>
-                            <label for="period-from" v-if="showFilterItem('period-from')">From:</label>
-                            <input id="period-from" type="date" v-model="filter.from" v-if="showFilterItem('period-from')">
-                            <label for="period-till" v-if="showFilterItem('period-till')">Till:</label>
-                            <input id="period-till" type="date" v-model="filter.till" v-if="showFilterItem('period-till')">
+                        <div>
+                            <table class="filter-table">
+                                <tr>
+                                    <td><label for="period-from" v-if="showFilterItem('period-from')">From:</label></td>
+                                    <td><input id="period-from" type="date" v-model="filter.from" v-if="showFilterItem('period-from')"></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="period-till" v-if="showFilterItem('period-till')">Till:</label></td>
+                                    <td><input id="period-till" type="date" v-model="filter.till" v-if="showFilterItem('period-till')"></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="faculty" v-if="showFilterItem('faculty')">Faculty:</label></td>
+                                    <td>
+                                    <p-dropdown v-model="filter.faculty" v-bind:options="faculties" filter optionLabel="name" placeholder="Select a Faculty" class="w-full md:w-14rem" v-on:change="getCathedras" v-if="showFilterItem('faculty')">
+                                        <template #value="slotProps">
+                                            <div v-if="slotProps.value" class="flex align-items-center">
+                                                <div>{{ slotProps.value.name }}</div>
+                                            </div>
+                                            <span v-else>
+                                                {{ slotProps.placeholder }}
+                                            </span>
+                                        </template>
+                                        <template #option="slotProps">
+                                            <div class="flex align-items-center">
+                                                <div>{{ slotProps.option.name }}</div>
+                                            </div>
+                                        </template>
+                                    </p-dropdown></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="cathedras" v-if="showFilterItem('cathedras')">Cathedra:</label></td>
+                                    <td>
+                                    <p-dropdown v-model="filter.cathedra" v-bind:options="cathedras" filter optionLabel="name" placeholder="Select a Cathedra" class="w-full md:w-14rem" v-on:change="getTeachers" v-if="showFilterItem('cathedras')">
+                                        <template #value="slotProps">
+                                            <div v-if="slotProps.value" class="flex align-items-center">
+                                                <div>{{ slotProps.value.name }}</div>
+                                            </div>
+                                            <span v-else>
+                                                {{ slotProps.placeholder }}
+                                            </span>
+                                        </template>
+                                        <template #option="slotProps">
+                                            <div class="flex align-items-center">
+                                                <div>{{ slotProps.option.name }}</div>
+                                            </div>
+                                        </template>
+                                    </p-dropdown></td>
 
-                            <label for="faculty" v-if="showFilterItem('faculty')">Faculty:</label>
+                                </tr>
+                                <tr>
+                                    <td><label for="user" v-if="showFilterItem('user')">User:</label></td>
+                                    <td>
+                                    <p-dropdown v-model="filter.user" v-bind:options="teachers" filter optionLabel="full_name" placeholder="Select a User" class="w-full md:w-14rem" v-if="showFilterItem('user')">
+                                        <template #value="slotProps">
+                                            <div v-if="slotProps.value" class="flex align-items-center">
+                                                <div>{{ slotProps.value.full_name }}</div>
+                                            </div>
+                                            <span v-else>
+                                                {{ slotProps.placeholder }}
+                                            </span>
+                                        </template>
+                                        <template #option="slotProps">
+                                            <div class="flex align-items-center">
+                                                <div>{{ slotProps.option.full_name }}</div>
+                                            </div>
+                                        </template>
+                                    </p-dropdown></td>
+                                </tr>
+                                <tr>
 
-                            <p-dropdown v-model="filter.faculty" v-bind:options="faculties" filter optionLabel="name" placeholder="Select a Faculty" class="w-full md:w-14rem" v-on:change="getCathedras" v-if="showFilterItem('faculty')">
-                                <template #value="slotProps">
-                                    <div v-if="slotProps.value" class="flex align-items-center">
-                                        <div>{{ slotProps.value.name }}</div>
-                                    </div>
-                                    <span v-else>
-                                        {{ slotProps.placeholder }}
-                                    </span>
-                                </template>
-                                <template #option="slotProps">
-                                    <div class="flex align-items-center">
-                                        <div>{{ slotProps.option.name }}</div>
-                                    </div>
-                                </template>
-                            </p-dropdown>
-
-                            <label for="cathedras" v-if="showFilterItem('cathedras')">Cathedra:</label>
-
-                            <p-dropdown v-model="filter.cathedra" v-bind:options="cathedras" filter optionLabel="name" placeholder="Select a Cathedra" class="w-full md:w-14rem" v-on:change="getTeachers" v-if="showFilterItem('cathedras')">
-                                <template #value="slotProps">
-                                    <div v-if="slotProps.value" class="flex align-items-center">
-                                        <div>{{ slotProps.value.name }}</div>
-                                    </div>
-                                    <span v-else>
-                                        {{ slotProps.placeholder }}
-                                    </span>
-                                </template>
-                                <template #option="slotProps">
-                                    <div class="flex align-items-center">
-                                        <div>{{ slotProps.option.name }}</div>
-                                    </div>
-                                </template>
-                            </p-dropdown>
-
-
-                            <label for="user" v-if="showFilterItem('user')">User:</label>
-
-                            <p-dropdown v-model="filter.user" v-bind:options="teachers" filter optionLabel="full_name" placeholder="Select a User" class="w-full md:w-14rem" v-if="showFilterItem('user')">
-                                <template #value="slotProps">
-                                    <div v-if="slotProps.value" class="flex align-items-center">
-                                        <div>{{ slotProps.value.full_name }}</div>
-                                    </div>
-                                    <span v-else>
-                                        {{ slotProps.placeholder }}
-                                    </span>
-                                </template>
-                                <template #option="slotProps">
-                                    <div class="flex align-items-center">
-                                        <div>{{ slotProps.option.full_name }}</div>
-                                    </div>
-                                </template>
-                            </p-dropdown>
-
-
-                            <label for="extended-view" v-if="showFilterItem('extended-view')">Extended view:</label>
-                            <input id="extended-view" type="checkbox" v-model="filter.extended" v-if="showFilterItem('extended-view')">
-
-                            <br>
+                                    <td><label for="extended-view" v-if="showFilterItem('extended-view')">Extended view:</label></td>
+                                    <td><input id="extended-view" type="checkbox" v-model="filter.extended" v-if="showFilterItem('extended-view')"></td>
+                                </tr>
+                            </table>
                             <button v-on:click="fillReport">Fill</button>
                         </div>
 

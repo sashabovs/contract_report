@@ -82,3 +82,8 @@ table td, table th{
 .parameter-requirement-fulfilled{
     background-color: green;
 }
+
+.filter-table td, .filter-table{
+    border: none;
+    padding: 1px;
+}

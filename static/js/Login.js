@@ -8,7 +8,7 @@ export default {
     data() {
         const date = Vue.ref();
         return {
-            loginVal: "melnik",
+            loginVal: "muxina",
             passwordVal: "123",
         };
     },

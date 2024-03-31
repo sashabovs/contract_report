@@ -441,6 +441,19 @@ def edit_report(id):
         )
 
     session = sqlalchemy.orm.Session(db_utils.engine_writer)
+
+
+    stmt = sqlalchemy.select(model.Reports.signed_by_teacher).where(
+        model.Reports.id == id
+    )
+    is_signed = session.execute(stmt).first()
+    if is_signed[0]:
+        return flask.Response(
+            "Report already signed",
+            status=400,
+        )
+
+
     session.query(model.Reports).filter(model.Reports.id == id).update(
         {
             model.Reports.period_of_report: data["period_of_report"]["period"],

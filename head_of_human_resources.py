@@ -408,6 +408,12 @@ def get_periods():
             )
 
         )
+
+        if role == db_utils.Role.TEACHER.value:
+            date_now = datetime.datetime.now()
+            stmt = stmt.where(model.OpenedPeriodForReports.time_of_opening <= date_now).where(model.OpenedPeriodForReports.time_of_closing >= date_now)
+
+
         rows = session.execute(stmt).all()
         mapping = [row._mapping["OpenedPeriodForReports"] for row in rows]
 
